@@ -578,7 +578,7 @@ public class WebdavServlet extends DefaultServlet {
                         String lockNullPath = (String) lockNullResourcesList.nextElement();
                         if (lockNullPath.equals(path)) {
                             resp.setStatus(WebdavStatus.SC_MULTI_STATUS);
-                            resp.setContentType("text/xml; charset=UTF-8");
+                            resp.setHeader("Content-Type", "text/xml; charset=UTF-8");
                             // Create multistatus object
                             XMLWriter generatedXML
                                     = new XMLWriter(resp.getWriter());
@@ -604,7 +604,7 @@ public class WebdavServlet extends DefaultServlet {
 
         resp.setStatus(WebdavStatus.SC_MULTI_STATUS);
 
-        resp.setContentType("text/xml; charset=UTF-8");
+        resp.setHeader("Content-Type", "text/xml; charset=UTF-8");
 
         // Create multistatus object
         XMLWriter generatedXML = new XMLWriter(resp.getWriter());
@@ -1356,7 +1356,7 @@ public class WebdavServlet extends DefaultServlet {
         generatedXML.writeElement("D", "prop", XMLWriter.CLOSING);
 
         resp.setStatus(WebdavStatus.SC_OK);
-        resp.setContentType("text/xml; charset=UTF-8");
+        resp.setHeader("Content-Type", "text/xml; charset=UTF-8");
         Writer writer = resp.getWriter();
         writer.write(generatedXML.toString());
         writer.close();

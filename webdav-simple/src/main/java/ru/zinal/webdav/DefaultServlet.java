@@ -16,7 +16,6 @@
  */
 package ru.zinal.webdav;
 
-
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -903,7 +902,7 @@ public class DefaultServlet
                 if (debug > 0)
                     log("DefaultServlet.serveFile:  contentType='" +
                         contentType + "'");
-                response.setContentType(contentType);
+                response.setHeader("Content-Type", contentType);
             }
             if ((cacheEntry.resource != null) && (contentLength >= 0)) {
                 if (debug > 0)
@@ -989,7 +988,7 @@ public class DefaultServlet
 
             } else {
 
-                response.setContentType("multipart/byteranges; boundary="
+                response.setHeader("Content-Type", "multipart/byteranges; boundary="
                                         + mimeSeparation);
 
                 if (content) {

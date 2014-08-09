@@ -940,11 +940,12 @@ public class FileDirContext extends BaseDirContext {
         }
 
         public String getMimeType() {
-            if (mimeType == null) {
-                if (!accessed) {
-                    collection = file.isDirectory();
-                    accessed = true;
-                }
+            if (mimeType != null) {
+                return mimeType;
+            }
+            if (!accessed) {
+                collection = file.isDirectory();
+                accessed = true;
             }
             return collection ? "httpd/unix-directory" : "application/octet-stream";
         }
