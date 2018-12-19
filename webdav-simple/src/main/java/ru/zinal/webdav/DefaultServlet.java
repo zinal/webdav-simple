@@ -67,8 +67,10 @@ import ru.zinal.webdav.util.StringManager;
 import ru.zinal.webdav.util.URLEncoder;
 import ru.zinal.webdav.naming.CacheEntry;
 import ru.zinal.webdav.naming.ProxyDirContext;
-import ru.zinal.webdav.naming.Resource;
+import ru.zinal.webdav.naming.WebResource;
+import ru.zinal.webdav.naming.WebResourceStream;
 import ru.zinal.webdav.naming.ResourceAttributes;
+import ru.zinal.webdav.naming.WebResourceData;
 
 
 /**
@@ -541,7 +543,7 @@ public class DefaultServlet
         }
 
         try {
-            Resource newResource = new Resource(resourceInputStream);
+            WebResource newResource = new WebResourceStream(resourceInputStream);
             // FIXME: Add attributes
             if (exists) {
                 resources.rebind(path, newResource);
@@ -590,11 +592,11 @@ public class DefaultServlet
         RandomAccessFile randAccessContentFile =
             new RandomAccessFile(contentFile, "rw");
 
-        Resource oldResource = null;
+        WebResource oldResource = null;
         try {
             Object obj = resources.lookup(path);
-            if (obj instanceof Resource)
-                oldResource = (Resource) obj;
+            if (obj instanceof WebResource)
+                oldResource = (WebResource) obj;
         } catch (NamingException e) {
             ;
         }
@@ -1542,9 +1544,9 @@ public class DefaultServlet
         if (readmeFile != null) {
             try {
                 Object obj = directory.lookup(readmeFile);
-                if ((obj != null) && (obj instanceof Resource)) {
+                if ((obj != null) && (obj instanceof WebResource)) {
                     StringWriter buffer = new StringWriter();
-                    InputStream is = ((Resource) obj).streamContent();
+                    InputStream is = ((WebResource) obj).streamContent();
                     copyRange(new InputStreamReader(is),
                             new PrintWriter(buffer));
                     return buffer.toString();
@@ -1570,8 +1572,8 @@ public class DefaultServlet
         if (localXsltFile != null) {
             try {
                 Object obj = directory.lookup(localXsltFile);
-                if ((obj != null) && (obj instanceof Resource)) {
-                    InputStream is = ((Resource) obj).streamContent();
+                if ((obj != null) && (obj instanceof WebResource)) {
+                    InputStream is = ((WebResource) obj).streamContent();
                     if (is != null) {
                         if (Globals.IS_SECURITY_ENABLED) {
                             return secureXslt(is);
@@ -1729,9 +1731,9 @@ public class DefaultServlet
                                   long length, Range range) {
         if ((sendfileSize > 0)
             && (entry.resource != null)
-            && ((length > sendfileSize) || (entry.resource.getContent() == null))
+            && ((length > sendfileSize) || (entry.resource.hasContent() == false))
             && (entry.attributes.getCanonicalPath() != null)
-            && (Boolean.TRUE == request.getAttribute("org.apache.tomcat.sendfile.support"))
+            && (Boolean.TRUE.equals(request.getAttribute("org.apache.tomcat.sendfile.support")))
             && (request.getClass().getName().equals("org.apache.catalina.connector.RequestFacade"))
             && (response.getClass().getName().equals("org.apache.catalina.connector.ResponseFacade"))) {
             request.setAttribute("org.apache.tomcat.sendfile.filename", entry.attributes.getCanonicalPath());
@@ -1932,12 +1934,13 @@ public class DefaultServlet
      * (even in the face of an exception).
      *
      * @param cacheEntry Cached version of requested resource
-     * @param ostream The output stream to write to
+     * @param in The input stream
+     * @param out The output stream to write to
      *
      * @exception IOException if an input/output error occurs
      */
-    protected void copy(CacheEntry cacheEntry, InputStream is,
-                      ServletOutputStream ostream)
+    protected void copy(CacheEntry cacheEntry, InputStream in,
+                      ServletOutputStream out)
         throws IOException {
 
         IOException exception = null;
@@ -1945,22 +1948,23 @@ public class DefaultServlet
 
         // Optimization: If the binary content has already been loaded, send
         // it directly
-        if (cacheEntry.resource != null) {
-            byte buffer[] = cacheEntry.resource.getContent();
+        if (cacheEntry.resource != null
+                && (cacheEntry.resource instanceof WebResourceData)) {
+            byte buffer[] = ((WebResourceData)cacheEntry.resource).getContent();
             if (buffer != null) {
-                ostream.write(buffer, 0, buffer.length);
+                out.write(buffer, 0, buffer.length);
                 return;
             }
             resourceInputStream = cacheEntry.resource.streamContent();
         } else {
-            resourceInputStream = is;
+            resourceInputStream = in;
         }
 
         InputStream istream = new BufferedInputStream
             (resourceInputStream, input);
 
         // Copy the input stream to the output stream
-        exception = copyRange(istream, ostream);
+        exception = copyRange(istream, out);
 
         // Clean up the input stream
         istream.close();

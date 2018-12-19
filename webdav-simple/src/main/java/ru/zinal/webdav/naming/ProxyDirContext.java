@@ -251,8 +251,7 @@ public class ProxyDirContext implements DirContext {
      * @return the object bound to name
      * @exception NamingException if a naming exception is encountered
      */
-    public Object lookup(Name name)
-        throws NamingException {
+    public Object lookup(Name name) throws NamingException {
         CacheEntry entry = cacheLookup(name.toString());
         if (entry != null) {
             if (!entry.exists) {
@@ -267,7 +266,7 @@ public class ProxyDirContext implements DirContext {
         }
         Object object = dirContext.lookup(parseName(name));
         if (object instanceof InputStream)
-            return new Resource((InputStream) object);
+            return new WebResourceStream((InputStream) object);
         else
             return object;
     }
@@ -295,14 +294,13 @@ public class ProxyDirContext implements DirContext {
         }
         Object object = dirContext.lookup(parseName(name));
         if (object instanceof InputStream) {
-            return new Resource((InputStream) object);
+            return new WebResourceStream((InputStream) object);
         } else if (object instanceof DirContext) {
             return object;
-        } else if (object instanceof Resource) {
+        } else if (object instanceof WebResource) {
             return object;
         } else {
-            return new Resource(new ByteArrayInputStream
-                (object.toString().getBytes()));
+            return new WebResourceData(object.toString().getBytes());
         }
     }
 
@@ -1383,14 +1381,14 @@ public class ProxyDirContext implements DirContext {
             try {
                 Object object = dirContext.lookup(parseName(name));
                 if (object instanceof InputStream) {
-                    entry.resource = new Resource((InputStream) object);
+                    entry.resource = new WebResourceStream((InputStream) object);
                 } else if (object instanceof DirContext) {
                     entry.context = (DirContext) object;
-                } else if (object instanceof Resource) {
-                    entry.resource = (Resource) object;
+                } else if (object instanceof WebResource) {
+                    entry.resource = (WebResource) object;
                 } else {
-                    entry.resource = new Resource(new ByteArrayInputStream
-                        (object.toString().getBytes()));
+                    // strange resource
+                    entry.resource = new WebResourceData(object.toString().getBytes());
                 }
                 Attributes attributes = dirContext.getAttributes(parseName(name));
                 if (!(attributes instanceof ResourceAttributes)) {
@@ -1472,7 +1470,7 @@ public class ProxyDirContext implements DirContext {
         if (((!entry.exists)
              || (entry.context != null)
              || ((entry.resource != null) 
-                 && (entry.resource.getContent() != null)))
+                 && entry.resource.hasContent()))
             && (System.currentTimeMillis() < entry.timestamp)) {
             return true;
         }
@@ -1542,14 +1540,13 @@ public class ProxyDirContext implements DirContext {
             try {
                 Object object = dirContext.lookup(name);
                 if (object instanceof InputStream) {
-                    entry.resource = new Resource((InputStream) object);
+                    entry.resource = new WebResourceStream((InputStream) object);
                 } else if (object instanceof DirContext) {
                     entry.context = (DirContext) object;
-                } else if (object instanceof Resource) {
-                    entry.resource = (Resource) object;
+                } else if (object instanceof WebResource) {
+                    entry.resource = (WebResource) object;
                 } else {
-                    entry.resource = new Resource(new ByteArrayInputStream
-                        (object.toString().getBytes()));
+                    entry.resource = new WebResourceData(object.toString().getBytes());
                 }
             } catch (NamingException e) {
                 exists = false;
@@ -1558,7 +1555,7 @@ public class ProxyDirContext implements DirContext {
 
         // Load object content
         if ((exists) && (entry.resource != null) 
-            && (entry.resource.getContent() == null) 
+            && entry.resource.hasContent()
             && (entry.attributes.getContentLength() >= 0)
             && (entry.attributes.getContentLength() < 
                 (cacheObjectMaxSize * 1024))) {
@@ -1577,7 +1574,7 @@ public class ProxyDirContext implements DirContext {
                         break;
                     pos = pos + n;
                 }
-                entry.resource.setContent(b);
+                entry.resource = new WebResourceData(b);
             } catch (IOException e) {
                 ; // Ignore
             } finally {

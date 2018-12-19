@@ -441,9 +441,9 @@ public class FileDirContext extends BaseDirContext {
         File file = new File(getBase(), name);
 
         InputStream is = null;
-        if (obj instanceof Resource) {
+        if (obj instanceof WebResource) {
             try {
-                is = ((Resource) obj).streamContent();
+                is = ((WebResource) obj).streamContent();
             } catch (IOException e) {
             }
         } else if (obj instanceof InputStream) {
@@ -770,7 +770,7 @@ public class FileDirContext extends BaseDirContext {
      * This specialized resource implementation avoids opening the InputStream to the file right away (which would put a
      * lock on the file).
      */
-    protected class FileResource extends Resource {
+    protected class FileResource extends WebResourceStream {
 
         // -------------------------------------------------------- Constructor
         public FileResource(File file) {
@@ -788,19 +788,12 @@ public class FileDirContext extends BaseDirContext {
          */
         protected long length = -1L;
 
-        // --------------------------------------------------- Resource Methods
-        /**
-         * Content accessor.
-         *
-         * @return InputStream
-         */
-        public InputStream streamContent()
-                throws IOException {
-            if (binaryContent == null) {
-                FileInputStream fis = new FileInputStream(file);
-                inputStream = fis;
-                return fis;
-            }
+        @Override
+        public InputStream streamContent() throws IOException {
+            InputStream tmp = super.streamContent();
+            if (tmp!=null)
+                try { tmp.close(); } catch(IOException ex) {}
+            super.setContent(new FileInputStream(file));
             return super.streamContent();
         }
 

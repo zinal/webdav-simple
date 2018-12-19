@@ -33,7 +33,7 @@ public class CacheEntry {
     public long timestamp = -1;
     public String name = null;
     public ResourceAttributes attributes = null;
-    public Resource resource = null;
+    public WebResource resource = null;
     public DirContext context = null;
     public boolean exists = true;
     public long accessCount = 0;

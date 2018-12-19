@@ -1686,7 +1686,7 @@ public class WebdavServlet extends DefaultServlet {
 
         } else {
 
-            if (object instanceof Resource) {
+            if (object instanceof WebResource) {
                 try {
                     resources.bind(dest, object);
                 } catch (NamingException e) {
@@ -2162,7 +2162,7 @@ public class WebdavServlet extends DefaultServlet {
                 generatedXML.writeData(resourceName);
                 generatedXML.writeElement("D", "displayname", XMLWriter.CLOSING);
                 if (cacheEntry.resource != null) {
-                    generatedXML.writeProperty("D", "getlastmodified", FastHttpDateFormat.formatDate(cacheEntry.attributes.getLastModified(), null));
+                    generatedXML.writeProperty("D", "getlastmodified", FastHttpDateFormat.formatDate(cacheEntry.attributes.getLastModified()));
                     generatedXML.writeProperty("D", "getcontentlength",
                             String.valueOf(cacheEntry.attributes.getContentLength()));
                     String contentType = getServletContext().getMimeType(cacheEntry.name);
@@ -2291,7 +2291,8 @@ public class WebdavServlet extends DefaultServlet {
                         if (cacheEntry.context != null) {
                             propertiesNotFound.addElement(property);
                         } else {
-                            generatedXML.writeProperty("D", "getlastmodified", FastHttpDateFormat.formatDate(cacheEntry.attributes.getLastModified(), null));
+                            generatedXML.writeProperty("D", "getlastmodified", 
+                                    FastHttpDateFormat.formatDate(cacheEntry.attributes.getLastModified()));
                         }
                     } else if (property.equals("resourcetype")) {
                         if (cacheEntry.context != null) {
@@ -2427,7 +2428,7 @@ public class WebdavServlet extends DefaultServlet {
                 generatedXML.writeData(resourceName);
                 generatedXML.writeElement("D", "displayname", XMLWriter.CLOSING);
                 generatedXML.writeProperty("D", "getlastmodified",
-                        FastHttpDateFormat.formatDate(lock.creationDate.getTime(), null));
+                        FastHttpDateFormat.formatDate(lock.creationDate.getTime()));
                 generatedXML.writeProperty("D", "getcontentlength",
                         String.valueOf(0));
                 generatedXML.writeProperty("D", "getcontenttype", "");
@@ -2525,7 +2526,7 @@ public class WebdavServlet extends DefaultServlet {
                         generatedXML.writeProperty("D", "getetag", "");
                     } else if (property.equals("getlastmodified")) {
                         generatedXML.writeProperty("D", "getlastmodified",
-                                FastHttpDateFormat.formatDate(lock.creationDate.getTime(), null));
+                                FastHttpDateFormat.formatDate(lock.creationDate.getTime()));
                     } else if (property.equals("resourcetype")) {
                         generatedXML.writeElement("D", "resourcetype",
                                 XMLWriter.OPENING);
@@ -2734,7 +2735,7 @@ public class WebdavServlet extends DefaultServlet {
             result += "Depth:" + depth + "\n";
             result += "Owner:" + owner + "\n";
             result += "Expiration:"
-                    + FastHttpDateFormat.formatDate(expiresAt, null) + "\n";
+                    + FastHttpDateFormat.formatDate(expiresAt) + "\n";
             Enumeration tokensList = tokens.elements();
             while (tokensList.hasMoreElements()) {
                 result += "Token:" + tokensList.nextElement() + "\n";
