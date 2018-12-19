@@ -62,16 +62,8 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.ext.EntityResolver2;
 
-import ru.zinal.webdav.util.RequestUtil;
-import ru.zinal.webdav.util.StringManager;
-import ru.zinal.webdav.util.URLEncoder;
-import ru.zinal.webdav.naming.CacheEntry;
-import ru.zinal.webdav.naming.ProxyDirContext;
-import ru.zinal.webdav.naming.WebResource;
-import ru.zinal.webdav.naming.WebResourceStream;
-import ru.zinal.webdav.naming.ResourceAttributes;
-import ru.zinal.webdav.naming.WebFolder;
-import ru.zinal.webdav.naming.WebResourceData;
+import ru.zinal.webdav.util.*;
+import ru.zinal.webdav.naming.*;
 
 
 /**
@@ -604,13 +596,15 @@ public class DefaultServlet extends HttpServlet {
         RandomAccessFile randAccessContentFile =
             new RandomAccessFile(contentFile, "rw");
 
-        WebResource oldResource = null;
+        WebResource oldResource;
         try {
             Object obj = resources.lookup(path);
             if (obj instanceof WebResource)
                 oldResource = (WebResource) obj;
+            else
+                oldResource = null;
         } catch (NamingException e) {
-            ;
+            oldResource = null;
         }
 
         // Copy data in oldRevisionContent to contentFile

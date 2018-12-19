@@ -44,31 +44,13 @@ import ru.zinal.webdav.util.RequestUtil;
  */
 public class FileDirContext extends BaseDirContext {
 
-    private static org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(FileDirContext.class);
+    private static final org.slf4j.Logger LOG
+            = org.slf4j.LoggerFactory.getLogger(FileDirContext.class);
 
-    // -------------------------------------------------------------- Constants
     /**
      * The descriptive information string for this implementation.
      */
-    protected static final int BUFFER_SIZE = 2048;
-
-    // ----------------------------------------------------------- Constructors
-
-    /**
-     * Builds a file directory context using the given environment.
-     */
-    public FileDirContext() {
-        super();
-    }
-
-    /**
-     * Builds a file directory context using the given environment.
-     */
-    public FileDirContext(Hashtable env) {
-        super(env);
-    }
-
-    // ----------------------------------------------------- Instance Variables
+    protected static final int BUFFER_SIZE = 8192;
 
     /**
      * The document base directory.
@@ -90,7 +72,19 @@ public class FileDirContext extends BaseDirContext {
      */
     protected boolean allowLinking = false;
 
-    // ------------------------------------------------------------- Properties
+    /**
+     * Builds a file directory context using the given environment.
+     */
+    public FileDirContext() {
+        super();
+    }
+
+    /**
+     * Builds a file directory context using the given environment.
+     */
+    public FileDirContext(Hashtable env) {
+        super(env);
+    }
 
     /**
      * Set the document root.
@@ -146,34 +140,25 @@ public class FileDirContext extends BaseDirContext {
 
     /**
      * Is linking allowed.
+     * @return 
      */
     public boolean getAllowLinking() {
         return allowLinking;
     }
 
-    // --------------------------------------------------------- Public Methods
-    /**
-     * Release any resources allocated for this directory context.
-     */
+    @Override
     public void release() {
         super.release();
     }
 
-    // -------------------------------------------------------- Context Methods
-    /**
-     * Retrieves the named object.
-     *
-     * @param name the name of the object to look up
-     * @return the object bound to name
-     * @exception NamingException if a naming exception is encountered
-     */
-    public Object lookup(String name)
-            throws NamingException {
+    @Override
+    public Object lookup(String name) throws NamingException {
         Object result = null;
         File file = file(name);
 
-        if (file == null)
+        if (file == null) {
             throw new NamingException(sm.getString("resources.notFound", name));
+        }
 
         if (file.isDirectory()) {
             FileDirContext tempContext = createFileDirContext(env);
@@ -186,7 +171,6 @@ public class FileDirContext extends BaseDirContext {
         }
 
         return result;
-
     }
 
     /**
@@ -708,7 +692,7 @@ public class FileDirContext extends BaseDirContext {
         if (names == null) {
             /* Some IO error occurred such as bad file permissions.
              Prevent a NPE with Arrays.sort(names) */
-            log.warn(sm.getString("fileResources.listingNull",
+            LOG.warn(sm.getString("fileResources.listingNull",
                     file.getAbsolutePath()));
             return entries;
         }
