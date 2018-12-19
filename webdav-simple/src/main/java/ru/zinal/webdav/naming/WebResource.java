@@ -43,4 +43,10 @@ public interface WebResource {
      */
     boolean hasContent();
     
+    /**
+     * Check if the resource is a collection
+     * @return true, if the resource is a collection, and false otherwise
+     */
+    boolean isCollection();
+
 }

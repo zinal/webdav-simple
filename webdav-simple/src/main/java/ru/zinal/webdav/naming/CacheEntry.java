@@ -26,41 +26,42 @@ import javax.naming.directory.DirContext;
  */
 public class CacheEntry {
     
-    
-    // ------------------------------------------------- Instance Variables
-
-
     public long timestamp = -1;
     public String name = null;
     public ResourceAttributes attributes = null;
     public WebResource resource = null;
-    public DirContext context = null;
     public boolean exists = true;
     public long accessCount = 0;
-    public int size = 1;
+    public int sizeEstimation = 1;
 
-
-    // ----------------------------------------------------- Public Methods
-
+    public final boolean isCollection() {
+        return (resource!=null)
+                && resource.isCollection();
+    }
+    
+    public final DirContext getContext() {
+        if ( (resource!=null)
+                && resource.isCollection() )
+            return ((WebFolder)resource).getContext();
+        return null;
+    }
 
     public void recycle() {
         timestamp = -1;
         name = null;
         attributes = null;
         resource = null;
-        context = null;
         exists = true;
         accessCount = 0;
-        size = 1;
+        sizeEstimation = 1;
     }
 
-
+    @Override
     public String toString() {
         return ("Cache entry: " + name + "\n"
                 + "Exists: " + exists + "\n"
                 + "Attributes: " + attributes + "\n"
-                + "Resource: " + resource + "\n"
-                + "Context: " + context);
+                + "Resource: " + resource);
     }
 
 

@@ -15,66 +15,51 @@
  */
 package ru.zinal.webdav.naming;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import javax.naming.directory.DirContext;
 
 /**
- * Encapsultes the contents of a resource.
+ * Encapsultes the collection.
  * 
- * @author <a href="mailto:remm@apache.org">Remy Maucherat</a>
  * @author <a href="mailto:maxzinal@yandex.ru">Maksim Zinal</a>
  *
  */
-public class WebResourceData implements WebResource {
+public class WebFolder implements WebResource {
     
-    public WebResourceData() {
+    public WebFolder() {
     }
     
-    public WebResourceData(byte[] binaryContent) {
-        setContent(binaryContent);
+    public WebFolder(DirContext context) {
+        setContext(context);
     }
     
     /**
      * Binary content.
      */
-    protected byte[] binaryContent = null;
+    protected DirContext context = null;
     
     @Override
     public InputStream streamContent() throws IOException {
-        if (binaryContent != null) {
-            return new ByteArrayInputStream(binaryContent);
-        }
         return null;
     }
 
     @Override
     public boolean hasContent() {
-        return (binaryContent != null);
+        return false;
     }
     
     @Override
     public boolean isCollection() {
-        return false;
+        return true;
     }
 
-    /**
-     * Content accessor.
-     * 
-     * @return binary content
-     */
-    public byte[] getContent() {
-        return binaryContent;
+    public final DirContext getContext() {
+        return context;
     }
-    
-    
-    /**
-     * Content mutator.
-     * 
-     * @param binaryContent New bin content
-     */
-    public final void setContent(byte[] binaryContent) {
-        this.binaryContent = binaryContent;
+
+    public final void setContext(DirContext context) {
+        this.context = context;
     }
     
 }

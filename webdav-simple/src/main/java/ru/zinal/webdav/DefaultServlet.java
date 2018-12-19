@@ -70,6 +70,7 @@ import ru.zinal.webdav.naming.ProxyDirContext;
 import ru.zinal.webdav.naming.WebResource;
 import ru.zinal.webdav.naming.WebResourceStream;
 import ru.zinal.webdav.naming.ResourceAttributes;
+import ru.zinal.webdav.naming.WebFolder;
 import ru.zinal.webdav.naming.WebResourceData;
 
 
@@ -132,7 +133,7 @@ public class DefaultServlet extends HttpServlet {
 
 
     /**
-     * The input buffer size to use when serving resources.
+     * The input buffer sizeEstimation to use when serving resources.
      */
     protected int input = 8192;
 
@@ -150,7 +151,7 @@ public class DefaultServlet extends HttpServlet {
 
 
     /**
-     * The output buffer size to use when serving resources.
+     * The output buffer sizeEstimation to use when serving resources.
      */
     protected int output = 2048;
 
@@ -199,7 +200,7 @@ public class DefaultServlet extends HttpServlet {
 
 
     /**
-     * Minimum size for sendfile usage in bytes.
+     * Minimum sizeEstimation for sendfile usage in bytes.
      */
     protected int sendfileSize = 48 * 1024;
 
@@ -728,7 +729,7 @@ public class DefaultServlet extends HttpServlet {
 
 
     /**
-     * Display the size of a file.
+     * Display the sizeEstimation of a file.
      */
     protected void displaySize(StringBuffer buf, int filesize) {
 
@@ -798,7 +799,7 @@ public class DefaultServlet extends HttpServlet {
 
         // If the resource is not a collection, and the resource path
         // ends with "/" or "\", return NOT FOUND
-        if (cacheEntry.context == null) {
+        if (!cacheEntry.isCollection()) {
             if (path.endsWith("/") || (path.endsWith("\\"))) {
                 // Check if we're included so we can return the appropriate
                 // missing resource name in the error
@@ -822,7 +823,7 @@ public class DefaultServlet extends HttpServlet {
 
         // Check if the conditions specified in the optional If headers are
         // satisfied.
-        if (cacheEntry.context == null) {
+        if (!cacheEntry.isCollection()) {
 
             // Checking If headers
             boolean included =
@@ -844,7 +845,7 @@ public class DefaultServlet extends HttpServlet {
         ArrayList ranges = null;
         long contentLength = -1L;
 
-        if (cacheEntry.context != null) {
+        if (cacheEntry.isCollection()) {
 
             // Skip directory listings if we have been configured to
             // suppress them
@@ -876,7 +877,7 @@ public class DefaultServlet extends HttpServlet {
             // Get content length
             contentLength = cacheEntry.attributes.getContentLength();
             // Special case for zero length files, which would cause a
-            // (silent) ISE when setting the output buffer size
+            // (silent) ISE when setting the output buffer sizeEstimation
             if (contentLength == 0L) {
                 content = false;
             }
@@ -906,7 +907,7 @@ public class DefaultServlet extends HttpServlet {
 
         }
 
-        if ( (cacheEntry.context != null)
+        if ( cacheEntry.isCollection()
                 || isError
                 || ( ((ranges == null) || (ranges.isEmpty()))
                         && (request.getHeader("Range") == null) )
@@ -932,13 +933,9 @@ public class DefaultServlet extends HttpServlet {
             }
 
             InputStream renderResult = null;
-            if (cacheEntry.context != null) {
-
-                if (content) {
-                    // Serve the directory browser
-                    renderResult = render(getPathPrefix(request), cacheEntry);
-                }
-
+            if (cacheEntry.isCollection() && content) {
+                // Serve the directory browser
+                renderResult = render(getPathPrefix(request), cacheEntry);
             }
 
             // Copy the input stream to our output stream (if requested)
@@ -1240,15 +1237,12 @@ public class DefaultServlet extends HttpServlet {
      * @throws javax.servlet.ServletException 
      */
     protected InputStream render(String contextPath, CacheEntry cacheEntry)
-        throws IOException, ServletException {
-
-        Source xsltSource = findXsltInputStream(cacheEntry.context);
-
+            throws IOException, ServletException {
+        Source xsltSource = findXsltInputStream(cacheEntry.getContext());
         if (xsltSource == null) {
             return renderHtml(contextPath, cacheEntry);
         }
         return renderXml(contextPath, cacheEntry, xsltSource);
-
     }
 
 
@@ -1313,12 +1307,12 @@ public class DefaultServlet extends HttpServlet {
 
                 sb.append("<entry");
                 sb.append(" type='")
-                  .append((childCacheEntry.context != null)?"dir":"file")
+                  .append((childCacheEntry.isCollection()) ? "dir" : "file")
                   .append("'");
                 sb.append(" urlPath='")
                   .append(rewrittenContextPath)
                   .append(rewriteUrl(cacheEntry.name + resourceName))
-                  .append((childCacheEntry.context != null)?"/":"")
+                  .append((childCacheEntry.isCollection()) ? "/" : "")
                   .append("'");
                 if (childCacheEntry.resource != null) {
                     sb.append(" size='")
@@ -1331,7 +1325,7 @@ public class DefaultServlet extends HttpServlet {
 
                 sb.append(">");
                 sb.append(RequestUtil.filter(trimmed));
-                if (childCacheEntry.context != null)
+                if (childCacheEntry.isCollection())
                     sb.append("/");
                 sb.append("</entry>");
 
@@ -1344,7 +1338,10 @@ public class DefaultServlet extends HttpServlet {
 
         sb.append("</entries>");
 
-        String readme = getReadme(cacheEntry.context);
+        String readme = null;
+        if (cacheEntry.isCollection()) {
+            readme = getReadme(cacheEntry.getContext());
+        }
 
         if (readme!=null) {
             sb.append("<readme><![CDATA[");
@@ -1498,16 +1495,16 @@ public class DefaultServlet extends HttpServlet {
                 sb.append(rewrittenContextPath);
                 resourceName = rewriteUrl(name + resourceName);
                 sb.append(resourceName);
-                if (childCacheEntry.context != null)
+                if (childCacheEntry.isCollection())
                     sb.append("/");
                 sb.append("\"><tt>");
                 sb.append(RequestUtil.filter(trimmed));
-                if (childCacheEntry.context != null)
+                if (childCacheEntry.isCollection())
                     sb.append("/");
                 sb.append("</tt></a></td>\r\n");
 
                 sb.append("<td align=\"right\"><tt>");
-                if (childCacheEntry.context != null)
+                if (childCacheEntry.isCollection())
                     sb.append("&nbsp;");
                 else
                     sb.append(renderSize(childCacheEntry.attributes.getContentLength()));
@@ -1530,7 +1527,7 @@ public class DefaultServlet extends HttpServlet {
 
         sb.append("<HR size=\"1\" noshade=\"noshade\">");
 
-        String readme = getReadme(cacheEntry.context);
+        String readme = getReadme(cacheEntry.getContext());
         if (readme!=null) {
             sb.append(readme);
             sb.append("<HR size=\"1\" noshade=\"noshade\">");
@@ -1549,9 +1546,9 @@ public class DefaultServlet extends HttpServlet {
 
 
     /**
-     * Render the specified file size (in bytes).
+     * Render the specified file sizeEstimation (in bytes).
      *
-     * @param size File size (in bytes)
+     * @param size File sizeEstimation (in bytes)
      * @return Rendered content
      */
     protected String renderSize(long size) {

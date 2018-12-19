@@ -55,6 +55,11 @@ public class WebResourceStream implements WebResource {
         return inputStream!=null;
     }
     
+    @Override
+    public boolean isCollection() {
+        return false;
+    }
+
     /**
      * Content mutator.
      * 

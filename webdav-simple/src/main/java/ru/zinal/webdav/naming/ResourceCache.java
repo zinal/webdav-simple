@@ -59,7 +59,7 @@ public class ResourceCache {
 
 
     /**
-     * Max size of resources which will have their content cached.
+     * Max sizeEstimation of resources which will have their content cached.
      */
     protected int cacheMaxSize = 10240; // 10 MB
 
@@ -84,7 +84,7 @@ public class ResourceCache {
 
 
     /**
-     * Current cache size in KB.
+     * Current cache sizeEstimation in KB.
      */
     protected int cacheSize = 0;
 
@@ -108,6 +108,7 @@ public class ResourceCache {
      * Return the access count.
      * Note: Update is not synced, so the number may not be completely 
      * accurate.
+     * @return 
      */
     public long getAccessCount() {
         return accessCount;
@@ -115,7 +116,8 @@ public class ResourceCache {
 
 
     /**
-     * Return the maximum size of the cache in KB.
+     * Return the maximum sizeEstimation of the cache in KB.
+     * @return 
      */
     public int getCacheMaxSize() {
         return cacheMaxSize;
@@ -123,7 +125,8 @@ public class ResourceCache {
 
 
     /**
-     * Set the maximum size of the cache in KB.
+     * Set the maximum sizeEstimation of the cache in KB.
+     * @param cacheMaxSize
      */
     public void setCacheMaxSize(int cacheMaxSize) {
         this.cacheMaxSize = cacheMaxSize;
@@ -131,7 +134,8 @@ public class ResourceCache {
 
 
     /**
-     * Return the current cache size in KB.
+     * Return the current cache sizeEstimation in KB.
+     * @return 
      */
     public int getCacheSize() {
         return cacheSize;
@@ -140,6 +144,7 @@ public class ResourceCache {
 
     /**
      * Return desired entry access ratio.
+     * @return 
      */
     public long getDesiredEntryAccessRatio() {
         return desiredEntryAccessRatio;
@@ -148,6 +153,7 @@ public class ResourceCache {
 
     /**
      * Set the desired entry access ratio.
+     * @param desiredEntryAccessRatio
      */
     public void setDesiredEntryAccessRatio(long desiredEntryAccessRatio) {
         this.desiredEntryAccessRatio = desiredEntryAccessRatio;
@@ -158,6 +164,7 @@ public class ResourceCache {
      * Return the number of cache hits.
      * Note: Update is not synced, so the number may not be completely 
      * accurate.
+     * @return 
      */
     public long getHitsCount() {
         return hitsCount;
@@ -166,6 +173,7 @@ public class ResourceCache {
 
     /**
      * Return the maximum amount of iterations during a space allocation.
+     * @return 
      */
     public int getMaxAllocateIterations() {
         return maxAllocateIterations;
@@ -174,6 +182,7 @@ public class ResourceCache {
 
     /**
      * Set the maximum amount of iterations during a space allocation.
+     * @param maxAllocateIterations
      */
     public void setMaxAllocateIterations(int maxAllocateIterations) {
         this.maxAllocateIterations = maxAllocateIterations;
@@ -182,6 +191,7 @@ public class ResourceCache {
 
     /**
      * Return the amount of spare not found entries.
+     * @return 
      */
     public int getSpareNotFoundEntries() {
         return spareNotFoundEntries;
@@ -190,6 +200,7 @@ public class ResourceCache {
 
     /**
      * Set the amount of spare not found entries.
+     * @param spareNotFoundEntries
      */
     public void setSpareNotFoundEntries(int spareNotFoundEntries) {
         this.spareNotFoundEntries = spareNotFoundEntries;
@@ -249,8 +260,8 @@ public class ResourceCache {
                     ((cache[entryPos].accessCount * 100) / accessCount);
                 if (entryAccessRatio < desiredEntryAccessRatio) {
                     toRemove[entriesFound] = entryPos;
-                    totalSpace += cache[entryPos].size;
-                    toFree -= cache[entryPos].size;
+                    totalSpace += cache[entryPos].sizeEstimation;
+                    toFree -= cache[entryPos].sizeEstimation;
                     entriesFound++;
                 }
             }
@@ -313,7 +324,7 @@ public class ResourceCache {
     public void load(CacheEntry entry) {
         if (entry.exists) {
             if (insertCache(entry)) {
-                cacheSize += entry.size;
+                cacheSize += entry.sizeEstimation;
             }
         } else {
             int sizeIncrement = (notFoundCache.get(entry.name) == null) ? 1 : 0;
@@ -326,7 +337,7 @@ public class ResourceCache {
     public boolean unload(String name) {
         CacheEntry removedEntry = removeCache(name);
         if (removedEntry != null) {
-            cacheSize -= removedEntry.size;
+            cacheSize -= removedEntry.sizeEstimation;
             return true;
         } else if (notFoundCache.remove(name) != null) {
             cacheSize--;
@@ -341,7 +352,7 @@ public class ResourceCache {
      * This will return the index for the closest inferior or equal item in the
      * given array.
      */
-    private static final int find(CacheEntry[] map, String name) {
+    private static int find(CacheEntry[] map, String name) {
 
         int a = 0;
         int b = map.length - 1;
@@ -385,7 +396,7 @@ public class ResourceCache {
      * Insert into the right place in a sorted MapElement array, and prevent
      * duplicates.
      */
-    private final boolean insertCache(CacheEntry newElement) {
+    private boolean insertCache(CacheEntry newElement) {
         CacheEntry[] oldCache = cache;
         int pos = find(oldCache, newElement.name);
         if ((pos != -1) && (newElement.name.equals(oldCache[pos].name))) {
@@ -404,7 +415,7 @@ public class ResourceCache {
     /**
      * Insert into the right place in a sorted MapElement array.
      */
-    private final CacheEntry removeCache(String name) {
+    private CacheEntry removeCache(String name) {
         CacheEntry[] oldCache = cache;
         int pos = find(oldCache, name);
         if ((pos != -1) && (name.equals(oldCache[pos].name))) {
