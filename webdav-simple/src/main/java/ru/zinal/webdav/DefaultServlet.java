@@ -88,8 +88,8 @@ import ru.zinal.webdav.naming.WebResourceData;
  * </pre>
  * <p>It can be mapped to sub-paths, however in all cases resources are served
  * from the web appplication resource root using the full path from the root
- * of the web application context.
- * <br/>e.g. given a web application structure:
+ * of the web application context.</p><p>
+ * e.g. given a web application structure:
  *</p>
  * <pre>
  * /context
@@ -116,8 +116,7 @@ import ru.zinal.webdav.naming.WebResourceData;
  * @author Remy Maucherat
  *
  */
-public class DefaultServlet
-    extends HttpServlet {
+public class DefaultServlet extends HttpServlet {
 
     private static final DocumentBuilderFactory factory;
 
@@ -135,7 +134,7 @@ public class DefaultServlet
     /**
      * The input buffer size to use when serving resources.
      */
-    protected int input = 2048;
+    protected int input = 8192;
 
 
     /**
@@ -272,6 +271,7 @@ public class DefaultServlet
     /**
      * Finalize this servlet.
      */
+    @Override
     public void destroy() {
     }
 
@@ -351,6 +351,7 @@ public class DefaultServlet
      * Return the relative path associated with this servlet.
      *
      * @param request The servlet request we are processing
+     * @return 
      */
     protected String getRelativePath(HttpServletRequest request) {
         // IMPORTANT: DefaultServlet can be mapped to '/' or '/path/*' but always
@@ -412,6 +413,7 @@ public class DefaultServlet
      * @exception IOException if an input/output error occurs
      * @exception ServletException if a servlet-specified error occurs
      */
+    @Override
     protected void doGet(HttpServletRequest request,
                          HttpServletResponse response)
         throws IOException, ServletException {
@@ -431,6 +433,7 @@ public class DefaultServlet
      * @exception IOException if an input/output error occurs
      * @exception ServletException if a servlet-specified error occurs
      */
+    @Override
     protected void doHead(HttpServletRequest request,
                           HttpServletResponse response)
         throws IOException, ServletException {
@@ -460,6 +463,7 @@ public class DefaultServlet
      * @exception ServletException  if the request for the
      *                                  OPTIONS cannot be handled
      */
+    @Override
     protected void doOptions(HttpServletRequest req, HttpServletResponse resp)
         throws ServletException, IOException {
 
@@ -489,6 +493,7 @@ public class DefaultServlet
      * @exception IOException if an input/output error occurs
      * @exception ServletException if a servlet-specified error occurs
      */
+    @Override
     protected void doPost(HttpServletRequest request,
                           HttpServletResponse response)
         throws IOException, ServletException {
@@ -505,6 +510,7 @@ public class DefaultServlet
      * @exception IOException if an input/output error occurs
      * @exception ServletException if a servlet-specified error occurs
      */
+    @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp)
         throws ServletException, IOException {
 
@@ -525,11 +531,11 @@ public class DefaultServlet
         boolean result = true;
 
         // Temp. content file used to support partial PUT
-        File contentFile = null;
+        File contentFile;
 
         Range range = parseContentRange(req, resp);
 
-        InputStream resourceInputStream = null;
+        InputStream resourceInputStream;
 
         // Append data specified in ranges to existing content for this
         // resource - create a temp. file on the local filesystem to
@@ -571,6 +577,11 @@ public class DefaultServlet
      * Handle a partial PUT.  New content specified in request is appended to
      * existing content in oldRevisionContent (if present). This code does
      * not support simultaneous partial updates to the same resource.
+     * @param req
+     * @param range
+     * @param path
+     * @return 
+     * @throws java.io.IOException 
      */
     protected File executePartialPut(HttpServletRequest req, Range range,
                                      String path)
@@ -644,6 +655,7 @@ public class DefaultServlet
      * @exception IOException if an input/output error occurs
      * @exception ServletException if a servlet-specified error occurs
      */
+    @Override
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp)
         throws ServletException, IOException {
 
@@ -690,6 +702,7 @@ public class DefaultServlet
      * @return boolean true if the resource meets all the specified conditions,
      * and false if any of the conditions is not satisfied, in which case
      * request processing is stopped
+     * @throws java.io.IOException
      */
     protected boolean checkIfHeaders(HttpServletRequest request,
                                      HttpServletResponse response,
@@ -804,7 +817,7 @@ public class DefaultServlet
         Integer status =
             (Integer) request.getAttribute("javax.servlet.error.status_code");
         if (status != null) {
-            isError = status.intValue() >= HttpServletResponse.SC_BAD_REQUEST;
+            isError = status >= HttpServletResponse.SC_BAD_REQUEST;
         }
 
         // Check if the conditions specified in the optional If headers are
@@ -1021,6 +1034,7 @@ public class DefaultServlet
      * @param request The servlet request we are processing
      * @param response The servlet response we are creating
      * @return Range
+     * @throws java.io.IOException
      */
     protected Range parseContentRange(HttpServletRequest request,
                                       HttpServletResponse response)
@@ -1081,7 +1095,9 @@ public class DefaultServlet
      *
      * @param request The servlet request we are processing
      * @param response The servlet response we are creating
+     * @param resourceAttributes
      * @return Vector of ranges
+     * @throws java.io.IOException
      */
     protected ArrayList parseRange(HttpServletRequest request,
                                 HttpServletResponse response,
@@ -1093,11 +1109,11 @@ public class DefaultServlet
 
         if (headerValue != null) {
 
-            long headerValueTime = (-1L);
+            long headerValueTime;
             try {
                 headerValueTime = request.getDateHeader("If-Range");
             } catch (IllegalArgumentException e) {
-                ;
+                headerValueTime = -1L;
             }
 
             String eTag = resourceAttributes.getETag();
@@ -1145,7 +1161,7 @@ public class DefaultServlet
 
         // Vector which will contain all the ranges which are successfully
         // parsed.
-        ArrayList<Range> result = new ArrayList<Range>();
+        ArrayList<Range> result = new ArrayList<>();
         StringTokenizer commaTokenizer = new StringTokenizer(rangeHeader, ",");
 
         // Parsing the range list
@@ -1217,6 +1233,11 @@ public class DefaultServlet
 
     /**
      *  Decide which way to render. HTML or XML.
+     * @param contextPath
+     * @param cacheEntry
+     * @return 
+     * @throws java.io.IOException 
+     * @throws javax.servlet.ServletException 
      */
     protected InputStream render(String contextPath, CacheEntry cacheEntry)
         throws IOException, ServletException {
@@ -1237,6 +1258,11 @@ public class DefaultServlet
      *
      * @param contextPath Context path to which our internal paths are
      *  relative
+     * @param cacheEntry
+     * @param xsltSource
+     * @return 
+     * @throws java.io.IOException 
+     * @throws javax.servlet.ServletException 
      */
     protected InputStream renderXml(String contextPath,
                                     CacheEntry cacheEntry,
@@ -1358,6 +1384,10 @@ public class DefaultServlet
      *
      * @param contextPath Context path to which our internal paths are
      *  relative
+     * @param cacheEntry
+     * @return 
+     * @throws java.io.IOException
+     * @throws javax.servlet.ServletException
      */
     protected InputStream renderHtml(String contextPath, CacheEntry cacheEntry)
         throws IOException, ServletException {
@@ -1522,6 +1552,7 @@ public class DefaultServlet
      * Render the specified file size (in bytes).
      *
      * @param size File size (in bytes)
+     * @return Rendered content
      */
     protected String renderSize(long size) {
 
@@ -1537,6 +1568,10 @@ public class DefaultServlet
 
     /**
      * Get the readme file as a string.
+     * @param directory
+     * @return 
+     * @throws java.io.IOException 
+     * @throws javax.servlet.ServletException 
      */
     protected String getReadme(DirContext directory)
         throws IOException, ServletException {
@@ -1547,13 +1582,16 @@ public class DefaultServlet
                 if ((obj != null) && (obj instanceof WebResource)) {
                     StringWriter buffer = new StringWriter();
                     InputStream is = ((WebResource) obj).streamContent();
-                    copyRange(new InputStreamReader(is),
+                    IOException error = copyRange(new InputStreamReader(is),
                             new PrintWriter(buffer));
+                    if (error!=null) {
+                        log("Failed while copying README", error);
+                    }
                     return buffer.toString();
                 }
             } catch (NamingException e) {
                 if (debug > 10)
-                    log("readme '" + readmeFile + "' not found", e);
+                    log("README '" + readmeFile + "' not found", e);
 
                 return null;
             }
@@ -1565,6 +1603,10 @@ public class DefaultServlet
 
     /**
      * Return a Source for the xsl template (if possible)
+     * @param directory
+     * @return 
+     * @throws java.io.IOException 
+     * @throws javax.servlet.ServletException 
      */
     protected Source findXsltInputStream(DirContext directory)
         throws IOException, ServletException {
@@ -1695,15 +1737,15 @@ public class DefaultServlet
             result = new DOMSource(document);
         } catch (ParserConfigurationException e) {
             if (debug > 0) {
-                log(e.getMessage(), e);
+                log(e.toString(), e);
             }
         } catch (SAXException e) {
             if (debug > 0) {
-                log(e.getMessage(), e);
+                log(e.toString(), e);
             }
         } catch (IOException e) {
             if (debug > 0) {
-                log(e.getMessage(), e);
+                log(e.toString(), e);
             }
         } finally {
             if (is != null) {
@@ -1711,7 +1753,7 @@ public class DefaultServlet
                     is.close();
                 } catch (IOException e) {
                     if (debug > 10) {
-                        log(e.getMessage(), e);
+                        log(e.toString(), e);
                     }
                 }
             }
@@ -1724,30 +1766,18 @@ public class DefaultServlet
 
     /**
      * Check if sendfile can be used.
+     * @param request
+     * @param response
+     * @param entry
+     * @param length
+     * @param range
+     * @return 
      */
     protected boolean checkSendfile(HttpServletRequest request,
                                   HttpServletResponse response,
                                   CacheEntry entry,
                                   long length, Range range) {
-        if ((sendfileSize > 0)
-            && (entry.resource != null)
-            && ((length > sendfileSize) || (entry.resource.hasContent() == false))
-            && (entry.attributes.getCanonicalPath() != null)
-            && (Boolean.TRUE.equals(request.getAttribute("org.apache.tomcat.sendfile.support")))
-            && (request.getClass().getName().equals("org.apache.catalina.connector.RequestFacade"))
-            && (response.getClass().getName().equals("org.apache.catalina.connector.ResponseFacade"))) {
-            request.setAttribute("org.apache.tomcat.sendfile.filename", entry.attributes.getCanonicalPath());
-            if (range == null) {
-                request.setAttribute("org.apache.tomcat.sendfile.start", new Long(0L));
-                request.setAttribute("org.apache.tomcat.sendfile.end", new Long(length));
-            } else {
-                request.setAttribute("org.apache.tomcat.sendfile.start", new Long(range.start));
-                request.setAttribute("org.apache.tomcat.sendfile.end", new Long(range.end + 1));
-            }
-            return true;
-        } else {
-            return false;
-        }
+        return false;
     }
 
 
@@ -1760,6 +1790,7 @@ public class DefaultServlet
      * @return boolean true if the resource meets the specified condition,
      * and false if the condition is not satisfied, in which case request
      * processing is stopped
+     * @throws java.io.IOException
      */
     protected boolean checkIfMatch(HttpServletRequest request,
                                  HttpServletResponse response,
@@ -1805,11 +1836,12 @@ public class DefaultServlet
      * @return boolean true if the resource meets the specified condition,
      * and false if the condition is not satisfied, in which case request
      * processing is stopped
+     * @throws java.io.IOException
      */
     protected boolean checkIfModifiedSince(HttpServletRequest request,
                                          HttpServletResponse response,
                                          ResourceAttributes resourceAttributes)
-        throws IOException {
+            throws IOException {
         try {
             long headerValue = request.getDateHeader("If-Modified-Since");
             long lastModified = resourceAttributes.getLastModified();
@@ -1844,11 +1876,12 @@ public class DefaultServlet
      * @return boolean true if the resource meets the specified condition,
      * and false if the condition is not satisfied, in which case request
      * processing is stopped
+     * @throws java.io.IOException
      */
     protected boolean checkIfNoneMatch(HttpServletRequest request,
                                      HttpServletResponse response,
                                      ResourceAttributes resourceAttributes)
-        throws IOException {
+            throws IOException {
 
         String eTag = resourceAttributes.getETag();
         String headerValue = request.getHeader("If-None-Match");
@@ -1904,11 +1937,12 @@ public class DefaultServlet
      * @return boolean true if the resource meets the specified condition,
      * and false if the condition is not satisfied, in which case request
      * processing is stopped
+     * @throws java.io.IOException
      */
     protected boolean checkIfUnmodifiedSince(HttpServletRequest request,
                                            HttpServletResponse response,
                                            ResourceAttributes resourceAttributes)
-        throws IOException {
+            throws IOException {
         try {
             long lastModified = resourceAttributes.getLastModified();
             long headerValue = request.getDateHeader("If-Unmodified-Since");
@@ -1943,8 +1977,8 @@ public class DefaultServlet
                       ServletOutputStream out)
         throws IOException {
 
-        IOException exception = null;
-        InputStream resourceInputStream = null;
+        IOException exception;
+        InputStream resourceInputStream;
 
         // Optimization: If the binary content has already been loaded, send
         // it directly
@@ -1972,7 +2006,6 @@ public class DefaultServlet
         // Rethrow any exception that has occurred
         if (exception != null)
             throw exception;
-
     }
 
 
@@ -1982,6 +2015,7 @@ public class DefaultServlet
      * (even in the face of an exception).
      *
      * @param cacheEntry Cached version of requested resource
+     * @param is Input data stream
      * @param writer The writer to write to
      *
      * @exception IOException if an input/output error occurs
@@ -1989,9 +2023,9 @@ public class DefaultServlet
     protected void copy(CacheEntry cacheEntry, InputStream is, PrintWriter writer)
         throws IOException {
 
-        IOException exception = null;
-
-        InputStream resourceInputStream = null;
+        IOException exception;
+        InputStream resourceInputStream;
+        
         if (cacheEntry.resource != null) {
             resourceInputStream = cacheEntry.resource.streamContent();
         } else {
@@ -2032,13 +2066,9 @@ public class DefaultServlet
     protected void copy(CacheEntry cacheEntry, ServletOutputStream ostream,
                       Range range)
         throws IOException {
-
-        IOException exception = null;
-
         InputStream resourceInputStream = cacheEntry.resource.streamContent();
-        InputStream istream =
-            new BufferedInputStream(resourceInputStream, input);
-        exception = copyRange(istream, ostream, range.start, range.end);
+        InputStream istream = new BufferedInputStream(resourceInputStream, input);
+        IOException exception = copyRange(istream, ostream, range.start, range.end);
 
         // Clean up the input stream
         istream.close();
@@ -2064,7 +2094,7 @@ public class DefaultServlet
                       Range range)
         throws IOException {
 
-        IOException exception = null;
+        IOException exception;
 
         InputStream resourceInputStream = cacheEntry.resource.streamContent();
 
@@ -2210,26 +2240,23 @@ public class DefaultServlet
      * @return Exception which occurred during processing
      */
     protected IOException copyRange(InputStream istream,
-                                  ServletOutputStream ostream) {
-
+            ServletOutputStream ostream) {
         // Copy the input stream to the output stream
         IOException exception = null;
         byte buffer[] = new byte[input];
-        int len = buffer.length;
         while (true) {
             try {
-                len = istream.read(buffer);
-                if (len == -1)
+                int len = istream.read(buffer);
+                if (len == -1) {
                     break;
+                }
                 ostream.write(buffer, 0, len);
             } catch (IOException e) {
                 exception = e;
-                len = -1;
                 break;
             }
         }
         return exception;
-
     }
 
 
@@ -2243,25 +2270,22 @@ public class DefaultServlet
      * @return Exception which occurred during processing
      */
     protected IOException copyRange(Reader reader, PrintWriter writer) {
-
         // Copy the input stream to the output stream
         IOException exception = null;
         char buffer[] = new char[input];
-        int len = buffer.length;
         while (true) {
             try {
-                len = reader.read(buffer);
-                if (len == -1)
+                int len = reader.read(buffer);
+                if (len == -1) {
                     break;
+                }
                 writer.write(buffer, 0, len);
             } catch (IOException e) {
                 exception = e;
-                len = -1;
                 break;
             }
         }
         return exception;
-
     }
 
 
@@ -2373,6 +2397,7 @@ public class DefaultServlet
 
         /**
          * Validate range.
+         * @return true, if range is valid, and false otherwise
          */
         public boolean validate() {
             if (end >= length)
@@ -2396,18 +2421,21 @@ public class DefaultServlet
      */
     private static class SecureEntityResolver implements EntityResolver2  {
 
+        @Override
         public InputSource resolveEntity(String publicId, String systemId)
                 throws SAXException, IOException {
             throw new SAXException(sm.getString("defaultServlet.blockExternalEntity",
                     publicId, systemId));
         }
 
+        @Override
         public InputSource getExternalSubset(String name, String baseURI)
                 throws SAXException, IOException {
             throw new SAXException(sm.getString("defaultServlet.blockExternalSubset",
                     name, baseURI));
         }
 
+        @Override
         public InputSource resolveEntity(String name, String publicId,
                 String baseURI, String systemId) throws SAXException,
                 IOException {
