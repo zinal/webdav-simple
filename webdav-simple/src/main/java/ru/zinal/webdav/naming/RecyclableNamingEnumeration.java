@@ -16,8 +16,9 @@
  */ 
 package ru.zinal.webdav.naming;
 
+import java.util.Collections;
 import java.util.Enumeration;
-import java.util.Vector;
+import java.util.List;
 
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -28,83 +29,53 @@ import javax.naming.NamingException;
  * @author Remy Maucherat
  *
  */
-public class RecyclableNamingEnumeration 
-    implements NamingEnumeration {
-
-
-    // ----------------------------------------------------------- Constructors
-
-
-    public RecyclableNamingEnumeration(Vector entries) {
-        this.entries = entries;
-        recycle();
-    }
-
-
-    // -------------------------------------------------------------- Variables
-
+public class RecyclableNamingEnumeration implements NamingEnumeration {
 
     /**
      * Entries.
      */
-    protected Vector entries;
-
+    protected final List<?> entries;
 
     /**
      * Underlying enumeration.
      */
     protected Enumeration enumeration;
 
+    public RecyclableNamingEnumeration(List<?> entries) {
+        this.entries = Collections.unmodifiableList(entries);
+        this.enumeration = Collections.enumeration(this.entries);
+    }
 
-    // --------------------------------------------------------- Public Methods
-
-
-    /**
-     * Retrieves the next element in the enumeration.
-     */
-    public Object next()
-        throws NamingException {
+    @Override
+    public Object next() throws NamingException {
         return nextElement();
     }
 
-
-    /**
-     * Determines whether there are any more elements in the enumeration.
-     */
-    public boolean hasMore()
-        throws NamingException {
+    @Override
+    public boolean hasMore() throws NamingException {
         return enumeration.hasMoreElements();
     }
 
-
-    /**
-     * Closes this enumeration.
-     */
-    public void close()
-        throws NamingException {
+    @Override
+    public void close() throws NamingException {
     }
 
-
+    @Override
     public boolean hasMoreElements() {
         return enumeration.hasMoreElements();
     }
 
-
+    @Override
     public Object nextElement() {
         return enumeration.nextElement();
     }
 
-
-    // -------------------------------------------------------- Package Methods
-
-
     /**
      * Recycle.
      */
-    void recycle() {
-    	enumeration = entries.elements();
+    public void recycle() {
+    	enumeration = Collections.enumeration(entries);
     }
-
 
 }
 

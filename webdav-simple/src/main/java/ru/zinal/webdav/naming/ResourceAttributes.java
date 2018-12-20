@@ -17,7 +17,9 @@
 package ru.zinal.webdav.naming;
 
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.Vector;
@@ -36,7 +38,6 @@ import ru.zinal.webdav.util.ConcurrentDateFormat;
  */
 public class ResourceAttributes implements Attributes {
     
-    
     // Default attribute names
     
     /**
@@ -44,84 +45,70 @@ public class ResourceAttributes implements Attributes {
      */
     public static final String CREATION_DATE = "creationdate";
     
-    
     /**
      * Creation date.
      */
     public static final String ALTERNATE_CREATION_DATE = "creation-date";
-    
     
     /**
      * Last modification date.
      */
     public static final String LAST_MODIFIED = "getlastmodified";
     
-    
     /**
      * Last modification date.
      */
     public static final String ALTERNATE_LAST_MODIFIED = "last-modified";
-    
     
     /**
      * Name.
      */
     public static final String NAME = "displayname";
     
-    
     /**
      * Type.
      */
     public static final String TYPE = "resourcetype";
-    
     
     /**
      * Type.
      */
     public static final String ALTERNATE_TYPE = "content-type";
     
-    
     /**
      * Source.
      */
     public static final String SOURCE = "source";
-    
     
     /**
      * MIME type of the content.
      */
     public static final String CONTENT_TYPE = "getcontenttype";
     
-    
     /**
      * Content language.
      */
     public static final String CONTENT_LANGUAGE = "getcontentlanguage";
-    
     
     /**
      * Content length.
      */
     public static final String CONTENT_LENGTH = "getcontentlength";
     
-    
     /**
      * Content length.
      */
     public static final String ALTERNATE_CONTENT_LENGTH = "content-length";
-    
     
     /**
      * ETag.
      */
     public static final String ETAG = "getetag";
     
-    
     /**
      * ETag.
      */
     public static final String ALTERNATE_ETAG = "etag";
-    
     
     /**
      * Collection type.
@@ -141,6 +128,56 @@ public class ResourceAttributes implements Attributes {
     };
     
     /**
+     * Collection flag.
+     */
+    protected boolean collection = false;
+
+    /**
+     * Content length.
+     */
+    protected long contentLength = -1;
+
+    /**
+     * Creation date.
+     */
+    protected Date creationDate = null;
+
+    /**
+     * Last modified date.
+     */
+    protected Date lastModifiedDate = null;
+
+    /**
+     * Last modified date in HTTP format.
+     */
+    protected String lastModifiedHttp = null;
+
+    /**
+     * MIME type.
+     */
+    protected String mimeType = null;
+    
+    /**
+     * Name.
+     */
+    protected String name = null;
+
+    /**
+     * Weak ETag.
+     */
+    protected String weakETag = null;
+
+    /**
+     * Strong ETag.
+     */
+    protected String strongETag = null;
+
+    /**
+     * External attributes.
+     */
+    protected Attributes attributes = null;
+
+    /**
      * Default constructor.
      */
     public ResourceAttributes() {
@@ -149,74 +186,13 @@ public class ResourceAttributes implements Attributes {
     
     /**
      * Merges with another attribute set.
+     * @param attributes
      */
     public ResourceAttributes(Attributes attributes) {
         this.attributes = attributes;
     }
-    
-    
-    // ----------------------------------------------------- Instance Variables
-
-
-    /**
-     * Collection flag.
-     */
-    protected boolean collection = false;
-
-
-    /**
-     * Content length.
-     */
-    protected long contentLength = -1;
-
-
-    /**
-     * Creation date.
-     */
-    protected Date creationDate = null;
-
-
-    /**
-     * Last modified date.
-     */
-    protected Date lastModifiedDate = null;
 
     
-    /**
-     * Last modified date in HTTP format.
-     */
-    protected String lastModifiedHttp = null;
-    
-
-    /**
-     * MIME type.
-     */
-    protected String mimeType = null;
-    
-
-    /**
-     * Name.
-     */
-    protected String name = null;
-
-
-    /**
-     * Weak ETag.
-     */
-    protected String weakETag = null;
-
-
-    /**
-     * Strong ETag.
-     */
-    protected String strongETag = null;
-
-
-    /**
-     * External attributes.
-     */
-    protected Attributes attributes = null;
-
     /**
      * Is collection.
      * @return true, if collection, and false otherwise
@@ -504,7 +480,7 @@ public class ResourceAttributes implements Attributes {
                 try {
                     name = attribute.get().toString();
                 } catch (NamingException e) {
-                    ; // No value for the attribute
+                    // No value for the attribute
                 }
             }
         }
@@ -537,7 +513,7 @@ public class ResourceAttributes implements Attributes {
                 try {
                     result = attribute.get().toString();
                 } catch (NamingException e) {
-                    ; // No value for the attribute
+                    // No value for the attribute
                 }
             }
         }
@@ -576,7 +552,7 @@ public class ResourceAttributes implements Attributes {
                 try {
                     result = attribute.get().toString();
                 } catch (NamingException e) {
-                    ; // No value for the attribute
+                    // No value for the attribute
                 }
             }
         }
@@ -587,10 +563,10 @@ public class ResourceAttributes implements Attributes {
             } else {
                 // The weakETag is contentLength + lastModified
                 if (weakETag == null) {
-                    long contentLength = getContentLength();
+                    long clval = getContentLength();
                     long lastModified = getLastModified();
-                    if ((contentLength >= 0) || (lastModified >= 0)) {
-                        weakETag = "W/\"" + contentLength + "-" +
+                    if ((clval >= 0) || (lastModified >= 0)) {
+                        weakETag = "W/\"" + clval + "-" +
                                    lastModified + "\"";
                     }
                 }
@@ -600,28 +576,15 @@ public class ResourceAttributes implements Attributes {
         return result;
     }
 
-
-    /**
-     * Get ETag.
-     * 
-     * @param strong Ignored
-     * @return strong ETag if available, else weak ETag.
-     * @deprecated
-     */
-    public String getETag(boolean strong) {
-        return getETag();
-    }
-
-
     /**
      * Set strong ETag.
+     * @param eTag
      */
     public void setETag(String eTag) {
         this.strongETag = eTag;
         if (attributes != null)
             attributes.put(ETAG, eTag);
     }
-
     
     /**
      * Return the canonical path of the resource, to possibly be used for 
@@ -634,59 +597,78 @@ public class ResourceAttributes implements Attributes {
         return null;
     }
     
-    
-    // ----------------------------------------------------- Attributes Methods
-
-
-    /**
-     * Get attribute.
-     */
+    @Override
     public Attribute get(String attrID) {
         if (attributes == null) {
-            if (attrID.equals(CREATION_DATE)) {
-                Date creationDate = getCreationDate();
-                if (creationDate == null) return null;
-                return new BasicAttribute(CREATION_DATE, creationDate);
-            } else if (attrID.equals(ALTERNATE_CREATION_DATE)) {
-                Date creationDate = getCreationDate();
-                if (creationDate == null) return null;
-                return new BasicAttribute(ALTERNATE_CREATION_DATE, creationDate);
-            } else if (attrID.equals(LAST_MODIFIED)) {
-                Date lastModifiedDate = getLastModifiedDate();
-                if (lastModifiedDate == null) return null;
-                return new BasicAttribute(LAST_MODIFIED, lastModifiedDate);
-            } else if (attrID.equals(ALTERNATE_LAST_MODIFIED)) {
-                Date lastModifiedDate = getLastModifiedDate();
-                if (lastModifiedDate == null) return null;
-                return new BasicAttribute(ALTERNATE_LAST_MODIFIED, lastModifiedDate);
-            } else if (attrID.equals(NAME)) {
-                String name = getName();
-                if (name == null) return null;
-                return new BasicAttribute(NAME, name);
-            } else if (attrID.equals(TYPE)) {
-                String resourceType = getResourceType();
-                if (resourceType == null) return null;
-                return new BasicAttribute(TYPE, resourceType);
-            } else if (attrID.equals(ALTERNATE_TYPE)) {
-                String resourceType = getResourceType();
-                if (resourceType == null) return null;
-                return new BasicAttribute(ALTERNATE_TYPE, resourceType);
-            } else if (attrID.equals(CONTENT_LENGTH)) {
-                long contentLength = getContentLength();
-                if (contentLength < 0) return null;
-                return new BasicAttribute(CONTENT_LENGTH, new Long(contentLength));
-            } else if (attrID.equals(ALTERNATE_CONTENT_LENGTH)) {
-                long contentLength = getContentLength();
-                if (contentLength < 0) return null;
-                return new BasicAttribute(ALTERNATE_CONTENT_LENGTH, new Long(contentLength));
-            } else if (attrID.equals(ETAG)) {
-                String etag = getETag();
-                if (etag == null) return null;
-                return new BasicAttribute(ETAG, etag);
-            } else if (attrID.equals(ALTERNATE_ETAG)) {
-                String etag = getETag();
-                if (etag == null) return null;
-                return new BasicAttribute(ALTERNATE_ETAG, etag);
+            switch (attrID) {
+                case CREATION_DATE:
+                {
+                    Date val = getCreationDate();
+                    if (val == null) return null;
+                    return new BasicAttribute(CREATION_DATE, val);
+                }
+                case ALTERNATE_CREATION_DATE:
+                {
+                    Date val = getCreationDate();
+                    if (val == null) return null;
+                    return new BasicAttribute(ALTERNATE_CREATION_DATE, val);
+                }
+                case LAST_MODIFIED:
+                {
+                    Date val = getLastModifiedDate();
+                    if (val == null) return null;
+                    return new BasicAttribute(LAST_MODIFIED, val);
+                }
+                case ALTERNATE_LAST_MODIFIED:
+                {
+                    Date val = getLastModifiedDate();
+                    if (val == null) return null;
+                    return new BasicAttribute(ALTERNATE_LAST_MODIFIED, val);
+                }
+                case NAME:
+                {
+                    String val = getName();
+                    if (val == null) return null;
+                    return new BasicAttribute(NAME, val);
+                }
+                case TYPE:
+                {
+                    String val = getResourceType();
+                    if (val == null) return null;
+                    return new BasicAttribute(TYPE, val);
+                }
+                case ALTERNATE_TYPE:
+                {
+                    String val = getResourceType();
+                    if (val == null) return null;
+                    return new BasicAttribute(ALTERNATE_TYPE, val);
+                }
+                case CONTENT_LENGTH:
+                {
+                    long val = getContentLength();
+                    if (val < 0) return null;
+                    return new BasicAttribute(CONTENT_LENGTH, new Long(val));
+                }
+                case ALTERNATE_CONTENT_LENGTH:
+                {
+                    long val = getContentLength();
+                    if (val < 0) return null;
+                    return new BasicAttribute(ALTERNATE_CONTENT_LENGTH, new Long(val));
+                }
+                case ETAG:
+                {
+                    String val = getETag();
+                    if (val == null) return null;
+                    return new BasicAttribute(ETAG, val);
+                }
+                case ALTERNATE_ETAG:
+                {
+                    String val = getETag();
+                    if (val == null) return null;
+                    return new BasicAttribute(ALTERNATE_ETAG, val);
+                }
+                default:
+                    break;
             }
         } else {
             return attributes.get(attrID);
@@ -694,10 +676,7 @@ public class ResourceAttributes implements Attributes {
         return null;
     }
     
-    
-    /**
-     * Put attribute.
-     */
+    @Override
     public Attribute put(Attribute attribute) {
         if (attributes == null) {
             try {
@@ -710,10 +689,7 @@ public class ResourceAttributes implements Attributes {
         }
     }
     
-    
-    /**
-     * Put attribute.
-     */
+    @Override
     public Attribute put(String attrID, Object val) {
         if (attributes == null) {
             return null; // No reason to implement this
@@ -722,10 +698,7 @@ public class ResourceAttributes implements Attributes {
         }
     }
     
-    
-    /**
-     * Remove attribute.
-     */
+    @Override
     public Attribute remove(String attrID) {
         if (attributes == null) {
             return null; // No reason to implement this
@@ -734,98 +707,79 @@ public class ResourceAttributes implements Attributes {
         }
     }
     
-    
-    /**
-     * Get all attributes.
-     */
+    @Override
     public NamingEnumeration getAll() {
         if (attributes == null) {
-            Vector attributes = new Vector();
-            Date creationDate = getCreationDate();
-            if (creationDate != null) {
-                attributes.addElement(new BasicAttribute
-                                      (CREATION_DATE, creationDate));
-                attributes.addElement(new BasicAttribute
-                                      (ALTERNATE_CREATION_DATE, creationDate));
+            List<Object> attrs = new ArrayList<>();
+            Date cdate = getCreationDate();
+            if (cdate != null) {
+                attrs.add(new BasicAttribute(CREATION_DATE, cdate));
+                attrs.add(new BasicAttribute(ALTERNATE_CREATION_DATE, cdate));
             }
-            Date lastModifiedDate = getLastModifiedDate();
-            if (lastModifiedDate != null) {
-                attributes.addElement(new BasicAttribute
-                                      (LAST_MODIFIED, lastModifiedDate));
-                attributes.addElement(new BasicAttribute
-                                      (ALTERNATE_LAST_MODIFIED, lastModifiedDate));
+            Date ldate = getLastModifiedDate();
+            if (ldate != null) {
+                attrs.add(new BasicAttribute(LAST_MODIFIED, ldate));
+                attrs.add(new BasicAttribute(ALTERNATE_LAST_MODIFIED, ldate));
             }
-            String name = getName();
-            if (name != null) {
-                attributes.addElement(new BasicAttribute(NAME, name));
+            String vname = getName();
+            if (vname != null) {
+                attrs.add(new BasicAttribute(NAME, vname));
             }
             String resourceType = getResourceType();
             if (resourceType != null) {
-                attributes.addElement(new BasicAttribute(TYPE, resourceType));
-                attributes.addElement(new BasicAttribute(ALTERNATE_TYPE, resourceType));
+                attrs.add(new BasicAttribute(TYPE, resourceType));
+                attrs.add(new BasicAttribute(ALTERNATE_TYPE, resourceType));
             }
-            long contentLength = getContentLength();
-            if (contentLength >= 0) {
-                Long contentLengthLong = new Long(contentLength);
-                attributes.addElement(new BasicAttribute(CONTENT_LENGTH, contentLengthLong));
-                attributes.addElement(new BasicAttribute(ALTERNATE_CONTENT_LENGTH, contentLengthLong));
+            long clen = getContentLength();
+            if (clen >= 0) {
+                attrs.add(new BasicAttribute(CONTENT_LENGTH, clen));
+                attrs.add(new BasicAttribute(ALTERNATE_CONTENT_LENGTH, clen));
             }
             String etag = getETag();
             if (etag != null) {
-                attributes.addElement(new BasicAttribute(ETAG, etag));
-                attributes.addElement(new BasicAttribute(ALTERNATE_ETAG, etag));
+                attrs.add(new BasicAttribute(ETAG, etag));
+                attrs.add(new BasicAttribute(ALTERNATE_ETAG, etag));
             }
-            return new RecyclableNamingEnumeration(attributes);
+            return new RecyclableNamingEnumeration(attrs);
         } else {
             return attributes.getAll();
         }
     }
     
-    
-    /**
-     * Get all attribute IDs.
-     */
+    @Override
     public NamingEnumeration getIDs() {
         if (attributes == null) {
-            Vector attributeIDs = new Vector();
-            Date creationDate = getCreationDate();
-            if (creationDate != null) {
-                attributeIDs.addElement(CREATION_DATE);
-                attributeIDs.addElement(ALTERNATE_CREATION_DATE);
+            List<String> attids = new ArrayList<>();
+            if (getCreationDate() != null) {
+                attids.add(CREATION_DATE);
+                attids.add(ALTERNATE_CREATION_DATE);
             }
-            Date lastModifiedDate = getLastModifiedDate();
-            if (lastModifiedDate != null) {
-                attributeIDs.addElement(LAST_MODIFIED);
-                attributeIDs.addElement(ALTERNATE_LAST_MODIFIED);
+            if (getLastModifiedDate() != null) {
+                attids.add(LAST_MODIFIED);
+                attids.add(ALTERNATE_LAST_MODIFIED);
             }
             if (getName() != null) {
-                attributeIDs.addElement(NAME);
+                attids.add(NAME);
             }
-            String resourceType = getResourceType();
-            if (resourceType != null) {
-                attributeIDs.addElement(TYPE);
-                attributeIDs.addElement(ALTERNATE_TYPE);
+            if (getResourceType() != null) {
+                attids.add(TYPE);
+                attids.add(ALTERNATE_TYPE);
             }
-            long contentLength = getContentLength();
-            if (contentLength >= 0) {
-                attributeIDs.addElement(CONTENT_LENGTH);
-                attributeIDs.addElement(ALTERNATE_CONTENT_LENGTH);
+            if (getContentLength() >= 0) {
+                attids.add(CONTENT_LENGTH);
+                attids.add(ALTERNATE_CONTENT_LENGTH);
             }
-            String etag = getETag();
-            if (etag != null) {
-                attributeIDs.addElement(ETAG);
-                attributeIDs.addElement(ALTERNATE_ETAG);
+            if (getETag() != null) {
+                attids.add(ETAG);
+                attids.add(ALTERNATE_ETAG);
             }
-            return new RecyclableNamingEnumeration(attributeIDs);
+            return new RecyclableNamingEnumeration(attids);
         } else {
             return attributes.getIDs();
         }
     }
     
-    
-    /**
-     * Retrieves the number of attributes in the attribute set.
-     */
+    @Override
     public int size() {
         if (attributes == null) {
             int size = 0;
@@ -845,17 +799,14 @@ public class ResourceAttributes implements Attributes {
     /**
      * Clone the attributes object (WARNING: fake cloning).
      */
+    @Override
     public Object clone() {
         return this;
     }
     
-    
-    /**
-     * Case sensitivity.
-     */
+    @Override
     public boolean isCaseIgnored() {
         return false;
     }
-    
     
 }
