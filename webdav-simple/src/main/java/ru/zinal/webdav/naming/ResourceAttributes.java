@@ -171,12 +171,6 @@ public class ResourceAttributes implements Attributes {
 
 
     /**
-     * Creation time.
-     */
-    protected long creation = -1;
-
-
-    /**
      * Creation date.
      */
     protected Date creationDate = null;
@@ -289,41 +283,6 @@ public class ResourceAttributes implements Attributes {
         if (attributes != null)
             attributes.put(CONTENT_LENGTH, contentLength);
     }
-    
-    
-    /**
-     * Get creation time.
-     * 
-     * @return creation time value
-     */
-    public long getCreation() {
-        if (creation != -1L)
-            return creation;
-        if (creationDate != null)
-            return creationDate.getTime();
-        if (attributes != null) {
-            Attribute attribute = attributes.get(CREATION_DATE);
-            if (attribute != null) {
-                try {
-                    Object value = attribute.get();
-                    if (value instanceof Long) {
-                        creation = (Long) value;
-                    } else if (value instanceof Date) {
-                        creation = ((Date) value).getTime();
-                        creationDate = (Date) value;
-                    } else {
-                        String creationDateValue = value.toString();
-                        Date result = parseDate(creationDateValue);
-                        if (result != null) {
-                            creation = result.getTime();
-                            creationDate = result;
-                        }
-                    }
-                } catch (NamingException e) {}
-            }
-        }
-        return creation;
-    }
 
     /**
      * Parsing the HTTP Date
@@ -343,17 +302,57 @@ public class ResourceAttributes implements Attributes {
         return null;
     }
     
+    /**
+     * Convert the attribute value to date
+     * @param attribute Source attribute
+     * @return Converted date value, or null, if conversion not possible
+     * @throws NamingException 
+     */
+    private Date convertAttribute(Attribute attribute) {
+        if (attribute==null)
+            return null;
+        Object value;
+        try {
+            value = attribute.get();
+        } catch(NamingException e) {
+            return null;
+        }
+        if (value instanceof Long) {
+            return new Date((Long) value);
+        } else if (value instanceof Date) {
+            return (Date) value;
+        } else {
+            String lastModifiedDateValue = value.toString();
+            Date result = parseDate(lastModifiedDateValue);
+            if (result != null) {
+                return result;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Get creation time.
+     * 
+     * @return creation time value
+     */
+    public long getCreation() {
+        Date date = getCreationDate();
+        if (date==null)
+            return -1L;
+        return date.getTime();
+    }
     
     /**
      * Set creation.
      * 
-     * @param creation New creation value
+     * @param value New creation value
      */
-    public void setCreation(long creation) {
-        this.creation = creation;
-        this.creationDate = null;
-        if (attributes != null)
-            attributes.put(CREATION_DATE, new Date(creation));
+    public void setCreation(long value) {
+        if (value < 0L)
+            setCreationDate(null);
+        else
+            setCreationDate(new Date(value));
     }
     
     
@@ -365,33 +364,9 @@ public class ResourceAttributes implements Attributes {
     public Date getCreationDate() {
         if (creationDate != null)
             return creationDate;
-        if (creation != -1L) {
-            creationDate = new Date(creation);
-            return creationDate;
-        }
         if (attributes != null) {
             Attribute attribute = attributes.get(CREATION_DATE);
-            if (attribute != null) {
-                try {
-                    Object value = attribute.get();
-                    if (value instanceof Long) {
-                        creation = ((Long) value);
-                        creationDate = new Date(creation);
-                    } else if (value instanceof Date) {
-                        creation = ((Date) value).getTime();
-                        creationDate = (Date) value;
-                    } else {
-                        String creationDateValue = value.toString();
-                        Date result = parseDate(creationDateValue);
-                        if (result != null) {
-                            creation = result.getTime();
-                            creationDate = result;
-                        }
-                    }
-                } catch (NamingException e) {
-                    ; // No value for the attribute
-                }
-            }
+            creationDate = convertAttribute(attribute);
         }
         return creationDate;
     }
@@ -403,7 +378,6 @@ public class ResourceAttributes implements Attributes {
      * @param creationDate New creation date
      */
     public void setCreationDate(Date creationDate) {
-        this.creation = creationDate.getTime();
         this.creationDate = creationDate;
         if (attributes != null)
             attributes.put(CREATION_DATE, creationDate);
@@ -426,13 +400,13 @@ public class ResourceAttributes implements Attributes {
     /**
      * Set last modified.
      * 
-     * @param lastModified New last modified value
+     * @param value New last modified value
      */
-    public void setLastModified(long lastModified) {
-        if (lastModified < 0L)
+    public void setLastModified(long value) {
+        if (value < 0L)
             setLastModifiedDate(null);
         else
-            setLastModifiedDate(new Date(lastModified));
+            setLastModifiedDate(new Date(value));
     }
 
     /**
@@ -456,22 +430,7 @@ public class ResourceAttributes implements Attributes {
             return lastModifiedDate;
         if (attributes != null) {
             Attribute attribute = attributes.get(LAST_MODIFIED);
-            if (attribute != null) {
-                try {
-                    Object value = attribute.get();
-                    if (value instanceof Long) {
-                        lastModifiedDate = new Date((Long) value);
-                    } else if (value instanceof Date) {
-                        lastModifiedDate = (Date) value;
-                    } else {
-                        String lastModifiedDateValue = value.toString();
-                        Date result = parseDate(lastModifiedDateValue);
-                        if (result != null) {
-                            lastModifiedDate = result;
-                        }
-                    }
-                } catch (NamingException e) {}
-            }
+            lastModifiedDate = convertAttribute(attribute);
         }
         return lastModifiedDate;
     }

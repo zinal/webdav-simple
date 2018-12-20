@@ -119,6 +119,7 @@ public class FileDirContext extends BaseDirContext {
 
     /**
      * Set case sensitivity.
+     * @param caseSensitive
      */
     public void setCaseSensitive(boolean caseSensitive) {
         this.caseSensitive = caseSensitive;
@@ -126,6 +127,7 @@ public class FileDirContext extends BaseDirContext {
 
     /**
      * Is case sensitive ?
+     * @return 
      */
     public boolean isCaseSensitive() {
         return caseSensitive;
@@ -133,6 +135,7 @@ public class FileDirContext extends BaseDirContext {
 
     /**
      * Set allow linking.
+     * @param allowLinking
      */
     public void setAllowLinking(boolean allowLinking) {
         this.allowLinking = allowLinking;
@@ -597,18 +600,14 @@ public class FileDirContext extends BaseDirContext {
 
         @Override
         public final long getCreation() {
-            if (creation != -1L)
-                return creation;
-            creation = getLastModified();
-            return creation;
+            return getCreationDate().getTime();
         }
 
         @Override
         public Date getCreationDate() {
-            if (creation == -1L) {
-                creation = getCreation();
-            }
-            return super.getCreationDate();
+            if (creationDate==null)
+                creationDate = getLastModifiedDate();
+            return creationDate;
         }
 
         @Override
