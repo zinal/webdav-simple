@@ -248,7 +248,7 @@ public class DefaultServlet extends HttpServlet {
     /**
      * The string manager for this package.
      */
-    protected static StringManager sm =
+    protected static final StringManager sm =
         StringManager.getManager(Constants.Package);
 
 
@@ -586,8 +586,8 @@ public class DefaultServlet extends HttpServlet {
         File tempDir = (File) getServletContext().getAttribute
             ("javax.servlet.context.tempdir");
         // Convert all '/' characters to '.' in resourcePath
-        String convertedResourcePath = path.replace('/', '.');
-        File contentFile = new File(tempDir, convertedResourcePath);
+        String convertedPath = path.replace('/', '.').replace('\\', '.');
+        File contentFile = new File(tempDir, convertedPath);
         if (contentFile.createNewFile()) {
             // Clean up contentFile when Tomcat is terminated
             contentFile.deleteOnExit();
@@ -637,7 +637,6 @@ public class DefaultServlet extends HttpServlet {
         requestBufInStream.close();
 
         return contentFile;
-
     }
 
 
@@ -716,6 +715,7 @@ public class DefaultServlet extends HttpServlet {
      * URL rewriter.
      *
      * @param path Path which has to be rewiten
+     * @return 
      */
     protected String rewriteUrl(String path) {
         return urlEncoder.encode( path );
@@ -1985,14 +1985,11 @@ public class DefaultServlet extends HttpServlet {
             resourceInputStream = in;
         }
 
-        InputStream istream = new BufferedInputStream
-            (resourceInputStream, input);
-
         // Copy the input stream to the output stream
-        exception = copyRange(istream, out);
-
-        // Clean up the input stream
-        istream.close();
+        try (InputStream istream = new BufferedInputStream
+                    (resourceInputStream, input)) {
+            exception = copyRange(istream, out);
+        }
 
         // Rethrow any exception that has occurred
         if (exception != null)
@@ -2055,19 +2052,18 @@ public class DefaultServlet extends HttpServlet {
      * @exception IOException if an input/output error occurs
      */
     protected void copy(CacheEntry cacheEntry, ServletOutputStream ostream,
-                      Range range)
-        throws IOException {
+            Range range) throws IOException {
         InputStream resourceInputStream = cacheEntry.resource.streamContent();
-        InputStream istream = new BufferedInputStream(resourceInputStream, input);
-        IOException exception = copyRange(istream, ostream, range.start, range.end);
-
-        // Clean up the input stream
-        istream.close();
+        IOException exception = null;
+        try (InputStream istream
+                = new BufferedInputStream(resourceInputStream, input)) {
+            exception = copyRange(istream, ostream, range.start, range.end);
+        }
 
         // Rethrow any exception that has occurred
-        if (exception != null)
+        if (exception != null) {
             throw exception;
-
+        }
     }
 
 

@@ -23,10 +23,10 @@ package ru.zinal.webdav.naming;
 
 public final class Constants {
 
+    public static final String Package = "ru.zinal.webdav";
+
     public static final String PROTOCOL_HANDLER_VARIABLE = 
         "java.protocol.handler.pkgs";
-
-    public static final String Package = "ru.zinal.webdav";
 
     // Default namespace name
     public static final String DEFAULT_NAMESPACE = "DAV:";
