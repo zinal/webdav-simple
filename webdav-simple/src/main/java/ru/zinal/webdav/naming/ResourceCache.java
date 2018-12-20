@@ -29,16 +29,10 @@ import java.util.Random;
 public class ResourceCache {
     
     
-    // ----------------------------------------------------------- Constructors
-    
-    
     public ResourceCache() {
     }
     
     
-    // ----------------------------------------------------- Instance Variables
-
-
     /**
      * Random generator used to determine elements to free.
      */
@@ -99,10 +93,6 @@ public class ResourceCache {
      * Number of cache hits.
      */
     protected long hitsCount = 0;
-
-
-    // ------------------------------------------------------------- Properties
-
 
     /**
      * Return the access count.
@@ -206,10 +196,6 @@ public class ResourceCache {
         this.spareNotFoundEntries = spareNotFoundEntries;
     }
 
-
-    // --------------------------------------------------------- Public Methods
-
-
     public boolean allocate(int space) {
 
         int toFree = space - (cacheMaxSize - cacheSize);
@@ -296,7 +282,6 @@ public class ResourceCache {
 
     }
 
-
     public CacheEntry lookup(String name) {
 
         CacheEntry cacheEntry = null;
@@ -317,7 +302,6 @@ public class ResourceCache {
             hitsCount++;
         }
         return cacheEntry;
-
     }
 
 

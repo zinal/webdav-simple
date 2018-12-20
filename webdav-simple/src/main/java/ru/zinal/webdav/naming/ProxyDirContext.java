@@ -124,7 +124,7 @@ public class ProxyDirContext implements DirContext {
      * @return
      */
     public DirContext getDirContext() {
-        return this.dirContext;
+        return dirContext;
     }
 
     /**

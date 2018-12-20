@@ -613,18 +613,14 @@ public class FileDirContext extends BaseDirContext {
 
         @Override
         public final long getLastModified() {
-            if (lastModified != -1L)
-                return lastModified;
-            lastModified = file.lastModified();
-            return lastModified;
+            return getLastModifiedDate().getTime();
         }
 
         @Override
         public Date getLastModifiedDate() {
-            if (lastModified == -1L) {
-                lastModified = getLastModified();
-            }
-            return super.getLastModifiedDate();
+            if (lastModifiedDate==null)
+                lastModifiedDate = new Date(file.lastModified());
+            return lastModifiedDate;
         }
 
         @Override

@@ -17,17 +17,16 @@
 package ru.zinal.webdav.naming;
 
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.Vector;
-
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.BasicAttribute;
+import ru.zinal.webdav.util.ConcurrentDateFormat;
 
 /**
  * Attributes implementation.
@@ -36,9 +35,6 @@ import javax.naming.directory.BasicAttribute;
  *
  */
 public class ResourceAttributes implements Attributes {
-    
-    
-    // -------------------------------------------------------------- Constants
     
     
     // Default attribute names
@@ -132,43 +128,17 @@ public class ResourceAttributes implements Attributes {
      */
     public static final String COLLECTION_TYPE = "<collection/>";
     
-    
-    /**
-     * HTTP date format.
-     */
-    protected static final SimpleDateFormat format =
-        new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US);
-    
-    
     /**
      * Date formats using for Date parsing.
      */
-    protected static final SimpleDateFormat formats[] = {
-        new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US),
-        new SimpleDateFormat("EEEEEE, dd-MMM-yy HH:mm:ss zzz", Locale.US),
-        new SimpleDateFormat("EEE MMMM d HH:mm:ss yyyy", Locale.US)
+    protected static final ConcurrentDateFormat formats[] = {
+        new ConcurrentDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", 
+                Locale.US, TimeZone.getTimeZone("GMT")),
+        new ConcurrentDateFormat("EEEEEE, dd-MMM-yy HH:mm:ss zzz", 
+                Locale.US, TimeZone.getTimeZone("GMT")),
+        new ConcurrentDateFormat("EEE MMMM d HH:mm:ss yyyy", 
+                Locale.US, TimeZone.getTimeZone("GMT"))
     };
-    
-    
-    protected final static TimeZone gmtZone = TimeZone.getTimeZone("GMT");
-
-
-    /**
-     * GMT timezone - all HTTP dates are on GMT
-     */
-    static {
-
-        format.setTimeZone(gmtZone);
-
-        formats[0].setTimeZone(gmtZone);
-        formats[1].setTimeZone(gmtZone);
-        formats[2].setTimeZone(gmtZone);
-
-    }
-
-
-    // ----------------------------------------------------------- Constructors
-    
     
     /**
      * Default constructor.
@@ -213,12 +183,6 @@ public class ResourceAttributes implements Attributes {
 
 
     /**
-     * Last modified time.
-     */
-    protected long lastModified = -1;
-
-
-    /**
      * Last modified date.
      */
     protected Date lastModifiedDate = null;
@@ -259,12 +223,9 @@ public class ResourceAttributes implements Attributes {
      */
     protected Attributes attributes = null;
 
-
-    // ------------------------------------------------------------- Properties
-
-
     /**
      * Is collection.
+     * @return true, if collection, and false otherwise
      */
     public boolean isCollection() {
         if (attributes != null) {
@@ -305,17 +266,13 @@ public class ResourceAttributes implements Attributes {
                 try {
                     Object value = attribute.get();
                     if (value instanceof Long) {
-                        contentLength = ((Long) value).longValue();
+                        contentLength = ((Long) value);
                     } else {
                         try {
                             contentLength = Long.parseLong(value.toString());
-                        } catch (NumberFormatException e) {
-                            ; // Ignore
-                        }
+                        } catch (NumberFormatException e) {}
                     }
-                } catch (NamingException e) {
-                    ; // No value for the attribute
-                }
+                } catch (NamingException e) {}
             }
         }
         return contentLength;
@@ -330,7 +287,7 @@ public class ResourceAttributes implements Attributes {
     public void setContentLength(long contentLength) {
         this.contentLength = contentLength;
         if (attributes != null)
-            attributes.put(CONTENT_LENGTH, new Long(contentLength));
+            attributes.put(CONTENT_LENGTH, contentLength);
     }
     
     
@@ -350,33 +307,40 @@ public class ResourceAttributes implements Attributes {
                 try {
                     Object value = attribute.get();
                     if (value instanceof Long) {
-                        creation = ((Long) value).longValue();
+                        creation = (Long) value;
                     } else if (value instanceof Date) {
                         creation = ((Date) value).getTime();
                         creationDate = (Date) value;
                     } else {
                         String creationDateValue = value.toString();
-                        Date result = null;
-                        // Parsing the HTTP Date
-                        for (int i = 0; (result == null) && 
-                                 (i < formats.length); i++) {
-                            try {
-                                result = formats[i].parse(creationDateValue);
-                            } catch (ParseException e) {
-                                ;
-                            }
-                        }
+                        Date result = parseDate(creationDateValue);
                         if (result != null) {
                             creation = result.getTime();
                             creationDate = result;
                         }
                     }
-                } catch (NamingException e) {
-                    ; // No value for the attribute
-                }
+                } catch (NamingException e) {}
             }
         }
         return creation;
+    }
+
+    /**
+     * Parsing the HTTP Date
+     * @param dv
+     * @return 
+     */
+    private Date parseDate(String dv) {
+        for (ConcurrentDateFormat df : formats) {
+            try {
+                final Date result = df.parse(dv);
+                if (result!=null)
+                    return result;
+            } catch (ParseException e) {
+                // noop
+            }
+        }
+        return null;
     }
     
     
@@ -411,23 +375,14 @@ public class ResourceAttributes implements Attributes {
                 try {
                     Object value = attribute.get();
                     if (value instanceof Long) {
-                        creation = ((Long) value).longValue();
+                        creation = ((Long) value);
                         creationDate = new Date(creation);
                     } else if (value instanceof Date) {
                         creation = ((Date) value).getTime();
                         creationDate = (Date) value;
                     } else {
                         String creationDateValue = value.toString();
-                        Date result = null;
-                        // Parsing the HTTP Date
-                        for (int i = 0; (result == null) && 
-                                 (i < formats.length); i++) {
-                            try {
-                                result = formats[i].parse(creationDateValue);
-                            } catch (ParseException e) {
-                                ;
-                            }
-                        }
+                        Date result = parseDate(creationDateValue);
                         if (result != null) {
                             creation = result.getTime();
                             creationDate = result;
@@ -461,44 +416,10 @@ public class ResourceAttributes implements Attributes {
      * @return lastModified time value
      */
     public long getLastModified() {
-        if (lastModified != -1L)
-            return lastModified;
-        if (lastModifiedDate != null)
-            return lastModifiedDate.getTime();
-        if (attributes != null) {
-            Attribute attribute = attributes.get(LAST_MODIFIED);
-            if (attribute != null) {
-                try {
-                    Object value = attribute.get();
-                    if (value instanceof Long) {
-                        lastModified = ((Long) value).longValue();
-                    } else if (value instanceof Date) {
-                        lastModified = ((Date) value).getTime();
-                        lastModifiedDate = (Date) value;
-                    } else {
-                        String lastModifiedDateValue = value.toString();
-                        Date result = null;
-                        // Parsing the HTTP Date
-                        for (int i = 0; (result == null) && 
-                                 (i < formats.length); i++) {
-                            try {
-                                result = 
-                                    formats[i].parse(lastModifiedDateValue);
-                            } catch (ParseException e) {
-                                ;
-                            }
-                        }
-                        if (result != null) {
-                            lastModified = result.getTime();
-                            lastModifiedDate = result;
-                        }
-                    }
-                } catch (NamingException e) {
-                    ; // No value for the attribute
-                }
-            }
-        }
-        return lastModified;
+        Date date = getLastModifiedDate();
+        if (date==null)
+            return -1L;
+        return date.getTime();
     }
     
     
@@ -508,13 +429,12 @@ public class ResourceAttributes implements Attributes {
      * @param lastModified New last modified value
      */
     public void setLastModified(long lastModified) {
-        this.lastModified = lastModified;
-        this.lastModifiedDate = null;
-        if (attributes != null)
-            attributes.put(LAST_MODIFIED, new Date(lastModified));
+        if (lastModified < 0L)
+            setLastModifiedDate(null);
+        else
+            setLastModifiedDate(new Date(lastModified));
     }
-    
-    
+
     /**
      * Set last modified date.
      * 
@@ -534,42 +454,23 @@ public class ResourceAttributes implements Attributes {
     public Date getLastModifiedDate() {
         if (lastModifiedDate != null)
             return lastModifiedDate;
-        if (lastModified != -1L) {
-            lastModifiedDate = new Date(lastModified);
-            return lastModifiedDate;
-        }
         if (attributes != null) {
             Attribute attribute = attributes.get(LAST_MODIFIED);
             if (attribute != null) {
                 try {
                     Object value = attribute.get();
                     if (value instanceof Long) {
-                        lastModified = ((Long) value).longValue();
-                        lastModifiedDate = new Date(lastModified);
+                        lastModifiedDate = new Date((Long) value);
                     } else if (value instanceof Date) {
-                        lastModified = ((Date) value).getTime();
                         lastModifiedDate = (Date) value;
                     } else {
                         String lastModifiedDateValue = value.toString();
-                        Date result = null;
-                        // Parsing the HTTP Date
-                        for (int i = 0; (result == null) && 
-                                 (i < formats.length); i++) {
-                            try {
-                                result = 
-                                    formats[i].parse(lastModifiedDateValue);
-                            } catch (ParseException e) {
-                                ;
-                            }
-                        }
+                        Date result = parseDate(lastModifiedDateValue);
                         if (result != null) {
-                            lastModified = result.getTime();
                             lastModifiedDate = result;
                         }
                     }
-                } catch (NamingException e) {
-                    ; // No value for the attribute
-                }
+                } catch (NamingException e) {}
             }
         }
         return lastModifiedDate;
@@ -579,13 +480,12 @@ public class ResourceAttributes implements Attributes {
     /**
      * Last modified date mutator.
      * 
-     * @param lastModifiedDate New last modified date
+     * @param date New last modified date
      */
-    public void setLastModifiedDate(Date lastModifiedDate) {
-        this.lastModified = lastModifiedDate.getTime();
-        this.lastModifiedDate = lastModifiedDate;
+    public void setLastModifiedDate(Date date) {
+        this.lastModifiedDate = date;
         if (attributes != null)
-            attributes.put(LAST_MODIFIED, lastModifiedDate);
+            attributes.put(LAST_MODIFIED, date);
     }
     
     
@@ -602,9 +502,7 @@ public class ResourceAttributes implements Attributes {
         if (modifiedDate == null) {
             modifiedDate = new Date();
         }
-        synchronized (format) {
-            lastModifiedHttp = format.format(modifiedDate);
-        }
+        lastModifiedHttp = formats[0].format(modifiedDate);
         return lastModifiedHttp;
     }
     
