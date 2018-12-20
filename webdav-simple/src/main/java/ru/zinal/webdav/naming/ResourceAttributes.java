@@ -22,7 +22,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
-import java.util.Vector;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
@@ -647,13 +646,13 @@ public class ResourceAttributes implements Attributes {
                 {
                     long val = getContentLength();
                     if (val < 0) return null;
-                    return new BasicAttribute(CONTENT_LENGTH, new Long(val));
+                    return new BasicAttribute(CONTENT_LENGTH, val);
                 }
                 case ALTERNATE_CONTENT_LENGTH:
                 {
                     long val = getContentLength();
                     if (val < 0) return null;
-                    return new BasicAttribute(ALTERNATE_CONTENT_LENGTH, new Long(val));
+                    return new BasicAttribute(ALTERNATE_CONTENT_LENGTH, val);
                 }
                 case ETAG:
                 {
