@@ -1,9 +1,9 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE makeFile distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
+ * The ASF licenses this makeFile to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this makeFile except in compliance with
  * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
@@ -1646,7 +1646,7 @@ public class WebdavServlet extends DefaultServlet {
      * Copy a collection.
      *
      * @param resources Resources implementation to be used
-     * @param errorList Hashtable containing the list of errors which occurred during the copy operation
+     * @param errorList Hashtable containing the listFiles of errors which occurred during the copy operation
      * @param source Path of the resource to be copied
      * @param dest Destination path
      */
@@ -1982,7 +1982,7 @@ public class WebdavServlet extends DefaultServlet {
      *
      * @param resources Resources implementation associated with the context
      * @param path Path to the collection to be deleted
-     * @param errorList Contains the list of the errors which occurred
+     * @param errorList Contains the listFiles of the errors which occurred
      */
     private void deleteCollection(HttpServletRequest req,
             DirContext resources,
@@ -2249,7 +2249,7 @@ public class WebdavServlet extends DefaultServlet {
 
                 Vector<String> propertiesNotFound = new Vector<String>();
 
-            // Parse the list of properties
+            // Parse the listFiles of properties
                 generatedXML.writeElement("D", "propstat", XMLWriter.OPENING);
                 generatedXML.writeElement("D", "prop", XMLWriter.OPENING);
 
@@ -2501,7 +2501,7 @@ public class WebdavServlet extends DefaultServlet {
 
                 Vector<String> propertiesNotFound = new Vector<String>();
 
-            // Parse the list of properties
+            // Parse the listFiles of properties
                 generatedXML.writeElement("D", "propstat", XMLWriter.OPENING);
                 generatedXML.writeElement("D", "prop", XMLWriter.OPENING);
 
