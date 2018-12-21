@@ -29,7 +29,6 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.io.Reader;
-import java.io.Serializable;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
@@ -179,7 +178,7 @@ public class DefaultServlet extends HttpServlet {
      * Should the Accept-Ranges: bytes header be send with static resources?
      */
     protected boolean useAcceptRanges = true;
-
+    
 
     @Override
     public void destroy() {
@@ -785,28 +784,33 @@ public class DefaultServlet extends HttpServlet {
                     // Silent catch
                 }
                 InputStream renderResult = null;
-                if (ostream == null) {
-                    // Output via a writer so can't use sendfile or write
-                    // content directly.
-                    if (resource.isDirectory()) {
-                        renderResult = render(getPathPrefix(request), resource);
+                try {
+                    if (ostream == null) {
+                        // Output via a writer so can't use sendfile or write
+                        // content directly.
+                        if (resource.isDirectory()) {
+                            renderResult = render(getPathPrefix(request), resource);
+                        } else {
+                            renderResult = resource.getInputStream();
+                        }
+                        copy(renderResult, writer);
                     } else {
-                        renderResult = resource.getInputStream();
+                        // Output is via an OutputStream
+                        if (resource.isDirectory()) {
+                            renderResult = render(getPathPrefix(request), resource);
+                        } else {
+                            // Output is content of resource
+                            renderResult = resource.getInputStream();
+                        }
+                        // If a stream was configured, it needs to be copied to
+                        // the output (this method closes the stream)
+                        if (renderResult != null) {
+                            copy(renderResult, ostream);
+                        }
                     }
-                    copy(renderResult, writer);
-                } else {
-                    // Output is via an OutputStream
-                    if (resource.isDirectory()) {
-                        renderResult = render(getPathPrefix(request), resource);
-                    } else {
-                        // Output is content of resource
-                        renderResult = resource.getInputStream();
-                    }
-                    // If a stream was configured, it needs to be copied to
-                    // the output (this method closes the stream)
-                    if (renderResult != null) {
-                        copy(renderResult, ostream);
-                    }
+                } finally {
+                    if (renderResult!=null)
+                        renderResult.close();
                 }
             }
 
@@ -868,75 +872,6 @@ public class DefaultServlet extends HttpServlet {
             }
         }
     }
-
-
-    /*
-     * Code borrowed heavily from Jasper's EncodingDetector
-     */
-    private static Charset processBom(InputStream is) throws IOException {
-        // Java supported character sets do not use BOMs longer than 4 bytes
-        byte[] bom = new byte[4];
-        is.mark(bom.length);
-
-        int count = is.read(bom);
-
-        // BOMs are at least 2 bytes
-        if (count < 2) {
-            skip(is, 0);
-            return null;
-        }
-
-        // Look for two byte BOMs
-        int b0 = bom[0] & 0xFF;
-        int b1 = bom[1] & 0xFF;
-        if (b0 == 0xFE && b1 == 0xFF) {
-            skip(is, 2);
-            return StandardCharsets.UTF_16BE;
-        }
-        if (b0 == 0xFF && b1 == 0xFE) {
-            skip(is, 2);
-            return StandardCharsets.UTF_16LE;
-        }
-
-        // Remaining BOMs are at least 3 bytes
-        if (count < 3) {
-            skip(is, 0);
-            return null;
-        }
-
-        // UTF-8 is only 3-byte BOM
-        int b2 = bom[2] & 0xFF;
-        if (b0 == 0xEF && b1 == 0xBB && b2 == 0xBF) {
-            skip(is, 3);
-            return StandardCharsets.UTF_8;
-        }
-
-        if (count < 4) {
-            skip(is, 0);
-            return null;
-        }
-
-        // Look for 4-bute BOMs
-        int b3 = bom[3] & 0xFF;
-        if (b0 == 0x00 && b1 == 0x00 && b2 == 0xFE && b3 == 0xFF) {
-            return Charset.forName("UTF32-BE");
-        }
-        if (b0 == 0xFF && b1 == 0xFE && b2 == 0x00 && b3 == 0x00) {
-            return Charset.forName("UTF32-LE");
-        }
-
-        skip(is, 0);
-        return null;
-    }
-
-
-    private static void skip(InputStream is, int skip) throws IOException {
-        is.reset();
-        while (skip-- > 0) {
-            is.read();
-        }
-    }
-
 
     private static boolean isText(String contentType) {
         return  contentType == null || contentType.startsWith("text") ||
@@ -1321,7 +1256,6 @@ public class DefaultServlet extends HttpServlet {
      *
      * @param contextPath Context path to which our internal paths are relative
      * @param resource    The associated resource
-     * @param encoding    The encoding to use to process the readme (if any)
      *
      * @return the HTML data
      *
@@ -1332,7 +1266,7 @@ public class DefaultServlet extends HttpServlet {
 
         // Prepare a writer to a buffered area
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        OutputStreamWriter osWriter = new OutputStreamWriter(stream, "UTF8");
+        OutputStreamWriter osWriter = new OutputStreamWriter(stream, CS_UTF8);
         PrintWriter writer = new PrintWriter(osWriter);
 
         StringBuilder sb = new StringBuilder();
@@ -1495,7 +1429,7 @@ public class DefaultServlet extends HttpServlet {
                     directory.getWebappPath() + readmeFile);
             if (resource.isFile()) {
                 StringWriter buffer = new StringWriter();
-                InputStreamReader reader = null;
+                InputStreamReader reader;
                 try (InputStream is = resource.getInputStream()){
                     reader = new InputStreamReader(is, CS_UTF8);
                     Throwable err = copyRange(reader, new PrintWriter(buffer));
@@ -1579,18 +1513,8 @@ public class DefaultServlet extends HttpServlet {
 
 
     private File validateGlobalXsltFile() {
-        Context context = resources.getContext();
-
-        File baseConf = new File(context.getCatalinaBase(), "conf");
-        File result = validateGlobalXsltFile(baseConf);
-        if (result == null) {
-            File homeConf = new File(context.getCatalinaHome(), "conf");
-            if (!baseConf.equals(homeConf)) {
-                result = validateGlobalXsltFile(homeConf);
-            }
-        }
-
-        return result;
+        WebdavContext context = resources.getContext();
+        return validateGlobalXsltFile(new File(context.getConfigPath()));
     }
 
 
@@ -1606,7 +1530,8 @@ public class DefaultServlet extends HttpServlet {
 
         // First check that the resulting path is under the provided base
         try {
-            if (!candidate.getCanonicalPath().startsWith(base.getCanonicalPath())) {
+            if (!candidate.getCanonicalPath()
+                    .startsWith(base.getCanonicalPath())) {
                 return null;
             }
         } catch (IOException ioe) {

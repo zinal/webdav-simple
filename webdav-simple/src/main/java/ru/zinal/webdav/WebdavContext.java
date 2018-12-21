@@ -13,28 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ru.zinal.webdav.model;
-
-import java.io.InputStream;
-import ru.zinal.webdav.WebdavContext;
+package ru.zinal.webdav;
 
 /**
  *
  * @author zinal
  */
-public interface WebResourceRoot {
+public class WebdavContext {
     
-    /**
-     * Get the resource by path
-     * @param path Path to the resource
-     * @return Resource description, or null of the resource was not found
-     */
-    WebResource getResource(String path);
+    private String configPath;
 
-    String[] list(String path);
+    public String getConfigPath() {
+        return configPath;
+    }
 
-    boolean write(String path, InputStream data, boolean overwrite);
-
-    public WebdavContext getContext();
+    public void setConfigPath(String configPath) {
+        this.configPath = configPath;
+    }
     
 }
