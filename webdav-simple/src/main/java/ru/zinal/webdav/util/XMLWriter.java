@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,8 +21,6 @@ import java.io.Writer;
 
 /**
  * XMLWriter helper class.
- *
- * @author <a href="mailto:remm@apache.org">Remy Maucherat</a>
  */
 public class XMLWriter {
 
@@ -54,27 +52,33 @@ public class XMLWriter {
     /**
      * Buffer.
      */
-    protected StringBuffer buffer = new StringBuffer();
+    protected StringBuilder buffer = new StringBuilder();
 
 
     /**
      * Writer.
      */
-    protected Writer writer = null;
+    protected final Writer writer;
 
 
     // ----------------------------------------------------------- Constructors
 
 
     /**
-     * Constructor.
+     * New XML writer utility that will store its data in an internal buffer.
      */
     public XMLWriter() {
+        this(null);
     }
 
 
     /**
-     * Constructor.
+     * New XML writer utility that will store its data in an internal buffer
+     * and can write it to the specified writer.
+     * <p>
+     * See {@link #sendData()}
+     *
+     * @param writer The writer to use
      */
     public XMLWriter(Writer writer) {
         this.writer = writer;
@@ -89,25 +93,9 @@ public class XMLWriter {
      *
      * @return String containing the generated XML
      */
+    @Override
     public String toString() {
         return buffer.toString();
-    }
-
-
-    /**
-     * Write property to the XML.
-     *
-     * @param namespace Namespace
-     * @param namespaceInfo Namespace info
-     * @param name Property name
-     * @param value Property value
-     */
-    public void writeProperty(String namespace, String namespaceInfo,
-                              String name, String value) {
-        writeElement(namespace, namespaceInfo, name, OPENING);
-        buffer.append(value);
-        writeElement(namespace, namespaceInfo, name, CLOSING);
-
     }
 
 
@@ -122,17 +110,6 @@ public class XMLWriter {
         writeElement(namespace, name, OPENING);
         buffer.append(value);
         writeElement(namespace, name, CLOSING);
-    }
-
-
-    /**
-     * Write property to the XML.
-     *
-     * @param namespace Namespace
-     * @param name Property name
-     */
-    public void writeProperty(String namespace, String name) {
-        writeElement(namespace, name, NO_CONTENT);
     }
 
 
@@ -162,38 +139,42 @@ public class XMLWriter {
             switch (type) {
             case OPENING:
                 if (namespaceInfo != null) {
-                    buffer.append("<" + namespace + ":" + name + " xmlns:"
-                                  + namespace + "=\""
-                                  + namespaceInfo + "\">");
+                    buffer.append("<").append(namespace).append(":")
+                            .append(name).append(" xmlns:")
+                            .append(namespace).append("=\"")
+                            .append(namespaceInfo).append("\">");
                 } else {
-                    buffer.append("<" + namespace + ":" + name + ">");
+                    buffer.append("<").append(namespace).append(":")
+                            .append(name).append(">");
                 }
                 break;
             case CLOSING:
-                buffer.append("</" + namespace + ":" + name + ">\n");
+                buffer.append("</").append(namespace).append(":")
+                        .append(name).append(">\n");
                 break;
             case NO_CONTENT:
             default:
                 if (namespaceInfo != null) {
-                    buffer.append("<" + namespace + ":" + name + " xmlns:"
-                                  + namespace + "=\""
-                                  + namespaceInfo + "\"/>");
+                    buffer.append("<").append(namespace).append(":")
+                            .append(name).append(" xmlns:").append(namespace)
+                            .append("=\"").append(namespaceInfo).append("\"/>");
                 } else {
-                    buffer.append("<" + namespace + ":" + name + "/>");
+                    buffer.append("<").append(namespace).append(":")
+                            .append(name).append("/>");
                 }
                 break;
             }
         } else {
             switch (type) {
             case OPENING:
-                buffer.append("<" + name + ">");
+                buffer.append("<").append(name).append(">");
                 break;
             case CLOSING:
-                buffer.append("</" + name + ">\n");
+                buffer.append("</").append(name).append(">\n");
                 break;
             case NO_CONTENT:
             default:
-                buffer.append("<" + name + "/>");
+                buffer.append("<").append(name).append("/>");
                 break;
             }
         }
@@ -216,7 +197,7 @@ public class XMLWriter {
      * @param data Data to append
      */
     public void writeData(String data) {
-        buffer.append("<![CDATA[" + data + "]]>");
+        buffer.append("<![CDATA[").append(data).append("]]>");
     }
 
 
@@ -229,13 +210,14 @@ public class XMLWriter {
 
 
     /**
-     * Send data and reinitializes buffer.
+     * Send data and reinitializes buffer, if a writer has been specified.
+     * @throws IOException Error writing XML data
      */
     public void sendData()
         throws IOException {
         if (writer != null) {
             writer.write(buffer.toString());
-            buffer = new StringBuffer();
+            buffer = new StringBuilder();
         }
     }
 
