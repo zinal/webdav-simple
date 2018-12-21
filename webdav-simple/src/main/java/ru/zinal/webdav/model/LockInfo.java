@@ -29,17 +29,20 @@ public class LockInfo implements Serializable, Cloneable {
     private static final long serialVersionUID = 1L;
 
     private final int maxDepth;
+    
+    int id;
     private String path;
     private String type;
     private String scope;
     private int depth;
     private String owner;
-    private final HashSet<String> tokens;
     private long expiresAt;
     private long creationDate;
+    private final HashSet<String> tokens;
 
     public LockInfo(int maxDepth) {
         this.maxDepth = maxDepth;
+        this.id = -1;
         this.path = "/";
         this.type = "write";
         this.scope = "exclusive";
@@ -52,6 +55,7 @@ public class LockInfo implements Serializable, Cloneable {
 
     public LockInfo(LockInfo li) {
         this.maxDepth = li.maxDepth;
+        this.id = li.id;
         this.path = li.path;
         this.type = li.type;
         this.scope = li.scope;
@@ -60,6 +64,14 @@ public class LockInfo implements Serializable, Cloneable {
         this.tokens = new HashSet<>(li.tokens);
         this.expiresAt = li.expiresAt;
         this.creationDate = li.creationDate;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 
     public String getPath() {

@@ -23,6 +23,10 @@ import java.util.List;
  */
 public interface LockManager {
     
+    void createResourceLock(LockInfo lock);
+    
+    LockInfo getResourceLock(int id);
+    
     LockInfo getResourceLock(String path);
     
     List<LockInfo> listResourceLocks(String pathPrefix, boolean exclusive);

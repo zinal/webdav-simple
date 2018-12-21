@@ -490,7 +490,7 @@ public class WebdavServlet extends DefaultServlet {
         }
 
         if (type == FIND_BY_PROPERTY) {
-            properties = new Vector<>();
+            properties = new ArrayList<>();
             // propNode must be non-null if type == FIND_BY_PROPERTY
             @SuppressWarnings("null")
             NodeList childList = propNode.getChildNodes();
@@ -502,10 +502,11 @@ public class WebdavServlet extends DefaultServlet {
                     break;
                 case Node.ELEMENT_NODE:
                     String nodeName = currentNode.getNodeName();
-                    String propertyName = null;
-                    if (nodeName.indexOf(':') != -1) {
-                        propertyName = nodeName.substring
-                            (nodeName.indexOf(':') + 1);
+                    String propertyName;
+                    int semiIndex = nodeName.indexOf(':');
+                    if (semiIndex != -1) {
+                        propertyName 
+                                = nodeName.substring(nodeName.indexOf(':') + 1);
                     } else {
                         propertyName = nodeName;
                     }
@@ -514,7 +515,6 @@ public class WebdavServlet extends DefaultServlet {
                     break;
                 }
             }
-
         }
 
         WebResource resource = resources.getResource(path);
@@ -1073,7 +1073,7 @@ public class WebdavServlet extends DefaultServlet {
 
                 // Checking if a child resource of this collection is
                 // already locked
-                Vector<String> lockPaths = new Vector<>();
+                List<String> lockedPaths = new ArrayList<>();
                 locksList = collectionLocks.elements();
                 while (locksList.hasMoreElements()) {
                     LockInfo currentLock = locksList.nextElement();
@@ -1086,7 +1086,7 @@ public class WebdavServlet extends DefaultServlet {
                          ((currentLock.isExclusive()) ||
                           (lock.isExclusive())) ) {
                         // A child collection of this collection is locked
-                        lockPaths.addElement(currentLock.getPath());
+                        lockedPaths.add(currentLock.getPath());
                     }
                 }
                 locksList = resourceLocks.elements();
@@ -1100,16 +1100,14 @@ public class WebdavServlet extends DefaultServlet {
                          ((currentLock.isExclusive()) ||
                           (lock.isExclusive())) ) {
                         // A child resource of this collection is locked
-                        lockPaths.addElement(currentLock.getPath());
+                        lockedPaths.add(currentLock.getPath());
                     }
                 }
 
-                if (!lockPaths.isEmpty()) {
+                if (!lockedPaths.isEmpty()) {
 
                     // One of the child paths was locked
                     // We generate a multistatus error report
-
-                    Enumeration<String> lockPathsList = lockPaths.elements();
 
                     resp.setStatus(WebdavStatus.SC_CONFLICT);
 
@@ -1119,12 +1117,12 @@ public class WebdavServlet extends DefaultServlet {
                     generatedXML.writeElement("D", DEFAULT_NAMESPACE,
                             "multistatus", XMLWriter.OPENING);
 
-                    while (lockPathsList.hasMoreElements()) {
+                    for (String lockedPath : lockedPaths) {
                         generatedXML.writeElement("D", "response",
                                 XMLWriter.OPENING);
                         generatedXML.writeElement("D", "href",
                                 XMLWriter.OPENING);
-                        generatedXML.writeText(lockPathsList.nextElement());
+                        generatedXML.writeText(lockedPath);
                         generatedXML.writeElement("D", "href",
                                 XMLWriter.CLOSING);
                         generatedXML.writeElement("D", "status",
@@ -1894,7 +1892,7 @@ public class WebdavServlet extends DefaultServlet {
      * @param path Path of the current resource
      * @param type Propfind type
      * @param propNames If the propfind type is find properties by
-     * name, then this Vector contains those properties
+     * name, then this List contains those properties
      */
     private void parseProperties(HttpServletRequest req,
             XMLWriter generatedXML, String path, int type,
@@ -1943,7 +1941,7 @@ public class WebdavServlet extends DefaultServlet {
      * @param path Path of the current resource
      * @param type Propfind type
      * @param propNames If the propfind type is find properties by
-     * name, then this Vector contains those properties
+     * name, then this List contains those properties
      */
     private void parseLockNullProperties(HttpServletRequest req,
             XMLWriter generatedXML, String path, int type,
