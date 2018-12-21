@@ -36,5 +36,7 @@ public interface WebResourceRoot {
     boolean write(String path, InputStream data, boolean overwrite);
 
     public WebdavContext getContext();
+
+    public boolean mkdir(String path);
     
 }

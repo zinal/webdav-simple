@@ -110,7 +110,7 @@ public class DefaultServlet extends HttpServlet {
     /**
      * Text output charset
      */
-    protected static final Charset CS_UTF8 = Charset.forName("UTF-8");
+    protected static final Charset CS_UTF8 = StandardCharsets.UTF_8;
 
     static {
         if (Globals.IS_SECURITY_ENABLED) {

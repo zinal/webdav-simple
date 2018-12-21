@@ -46,7 +46,7 @@ public interface GenericResource {
      * Get the creation time
      * @return Last modified timestamp
      */
-    long getCreatedAt();
+    long getCreation();
 
     /**
      * Get the last modified time

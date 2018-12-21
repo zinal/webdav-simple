@@ -41,17 +41,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.apache.catalina.WebResource;
-import org.apache.catalina.connector.RequestFacade;
-import org.apache.catalina.util.DOMWriter;
-import org.apache.catalina.util.URLEncoder;
-import org.apache.catalina.util.XMLWriter;
-import org.apache.tomcat.util.buf.UDecoder;
-import org.apache.tomcat.util.http.ConcurrentDateFormat;
-import org.apache.tomcat.util.http.FastHttpDateFormat;
-import org.apache.tomcat.util.http.RequestUtil;
-import org.apache.tomcat.util.security.ConcurrentMessageDigest;
-import org.apache.tomcat.util.security.MD5Encoder;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -60,73 +49,18 @@ import org.xml.sax.EntityResolver;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
+import ru.zinal.webdav.util.*;
+import ru.zinal.webdav.model.*;
+
 /**
- * Servlet which adds support for WebDAV level 2. All the basic HTTP requests
- * are handled by the DefaultServlet. The WebDAVServlet must not be used as the
- * default servlet (ie mapped to '/') as it will not work in this configuration.
- * <p>
- * Mapping a subpath (e.g. <code>/webdav/*</code> to this servlet has the effect
- * of re-mounting the entire web application under that sub-path, with WebDAV
- * access to all the resources. The <code>WEB-INF</code> and <code>META-INF</code>
- * directories are protected in this re-mounted resource tree.
- * <p>
- * To enable WebDAV for a context add the following to web.xml:
- * <pre>
- * &lt;servlet&gt;
- *  &lt;servlet-name&gt;webdav&lt;/servlet-name&gt;
- *  &lt;servlet-class&gt;org.apache.catalina.servlets.WebdavServlet&lt;/servlet-class&gt;
- *    &lt;init-param&gt;
- *      &lt;param-name&gt;debug&lt;/param-name&gt;
- *      &lt;param-value&gt;0&lt;/param-value&gt;
- *    &lt;/init-param&gt;
- *    &lt;init-param&gt;
- *      &lt;param-name&gt;listings&lt;/param-name&gt;
- *      &lt;param-value&gt;false&lt;/param-value&gt;
- *    &lt;/init-param&gt;
- *  &lt;/servlet&gt;
- *  &lt;servlet-mapping&gt;
- *    &lt;servlet-name&gt;webdav&lt;/servlet-name&gt;
- *    &lt;url-pattern&gt;/*&lt;/url-pattern&gt;
- *  &lt;/servlet-mapping&gt;
- * </pre>
- * This will enable read only access. To enable read-write access add:
- * <pre>
- *  &lt;init-param&gt;
- *    &lt;param-name&gt;readonly&lt;/param-name&gt;
- *    &lt;param-value&gt;false&lt;/param-value&gt;
- *  &lt;/init-param&gt;
- * </pre>
- * To make the content editable via a different URL, use the following
- * mapping:
- * <pre>
- *  &lt;servlet-mapping&gt;
- *    &lt;servlet-name&gt;webdav&lt;/servlet-name&gt;
- *    &lt;url-pattern&gt;/webdavedit/*&lt;/url-pattern&gt;
- *  &lt;/servlet-mapping&gt;
- * </pre>
- * By default access to /WEB-INF and META-INF are not available via WebDAV. To
- * enable access to these URLs, use add:
- * <pre>
- *  &lt;init-param&gt;
- *    &lt;param-name&gt;allowSpecialPaths&lt;/param-name&gt;
- *    &lt;param-value&gt;true&lt;/param-value&gt;
- *  &lt;/init-param&gt;
- * </pre>
- * Don't forget to secure access appropriately to the editing URLs, especially
- * if allowSpecialPaths is used. With the mapping configuration above, the
- * context will be accessible to normal users as before. Those users with the
- * necessary access will be able to edit content available via
- * http://host:port/context/content using
- * http://host:port/context/webdavedit/content
+ * An adjusted version of WevdavServlet from Tomcat 9.
  *
  * @author Remy Maucherat
+ * @author Maksim Zinal
  */
 public class WebdavServlet extends DefaultServlet {
 
     private static final long serialVersionUID = 1L;
-
-
-    // -------------------------------------------------------------- Constants
 
     private static final URLEncoder URL_ENCODER_XML;
     static {
@@ -201,9 +135,6 @@ public class WebdavServlet extends DefaultServlet {
         new ConcurrentDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US,
                 TimeZone.getTimeZone("GMT"));
 
-
-    // ----------------------------------------------------- Instance Variables
-
     /**
      * Repository of the locks put on single resources.
      * <p>
@@ -237,7 +168,7 @@ public class WebdavServlet extends DefaultServlet {
     /**
      * Secret information used to generate reasonably secure lock ids.
      */
-    private String secret = "catalina";
+    private String secret = "superpanda97";
 
 
     /**
@@ -291,7 +222,7 @@ public class WebdavServlet extends DefaultServlet {
     protected DocumentBuilder getDocumentBuilder()
         throws ServletException {
         DocumentBuilder documentBuilder = null;
-        DocumentBuilderFactory documentBuilderFactory = null;
+        DocumentBuilderFactory documentBuilderFactory;
         try {
             documentBuilderFactory = DocumentBuilderFactory.newInstance();
             documentBuilderFactory.setNamespaceAware(true);
@@ -309,6 +240,10 @@ public class WebdavServlet extends DefaultServlet {
 
     /**
      * Handles the special WebDAV methods.
+     * @param req
+     * @param resp
+     * @throws javax.servlet.ServletException
+     * @throws java.io.IOException
      */
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp)
@@ -340,25 +275,33 @@ public class WebdavServlet extends DefaultServlet {
             log("[" + method + "] " + path);
         }
 
-        if (method.equals(METHOD_PROPFIND)) {
-            doPropfind(req, resp);
-        } else if (method.equals(METHOD_PROPPATCH)) {
-            doProppatch(req, resp);
-        } else if (method.equals(METHOD_MKCOL)) {
-            doMkcol(req, resp);
-        } else if (method.equals(METHOD_COPY)) {
-            doCopy(req, resp);
-        } else if (method.equals(METHOD_MOVE)) {
-            doMove(req, resp);
-        } else if (method.equals(METHOD_LOCK)) {
-            doLock(req, resp);
-        } else if (method.equals(METHOD_UNLOCK)) {
-            doUnlock(req, resp);
-        } else {
-            // DefaultServlet processing
-            super.service(req, resp);
+        switch (method) {
+            case METHOD_PROPFIND:
+                doPropfind(req, resp);
+                break;
+            case METHOD_PROPPATCH:
+                doProppatch(req, resp);
+                break;
+            case METHOD_MKCOL:
+                doMkcol(req, resp);
+                break;
+            case METHOD_COPY:
+                doCopy(req, resp);
+                break;
+            case METHOD_MOVE:
+                doMove(req, resp);
+                break;
+            case METHOD_LOCK:
+                doLock(req, resp);
+                break;
+            case METHOD_UNLOCK:
+                doUnlock(req, resp);
+                break;
+            default:
+                // DefaultServlet processing
+                super.service(req, resp);
+                break;
         }
-
     }
 
 
@@ -368,7 +311,7 @@ public class WebdavServlet extends DefaultServlet {
      * @param path the full path of the resource being accessed
      * @return <code>true</code> if the resource specified is under a special path
      */
-    private final boolean isSpecialPath(final String path) {
+    private boolean isSpecialPath(final String path) {
         return !allowSpecialPaths && (
                 path.toUpperCase(Locale.ENGLISH).startsWith("/WEB-INF") ||
                 path.toUpperCase(Locale.ENGLISH).startsWith("/META-INF"));
@@ -408,6 +351,7 @@ public class WebdavServlet extends DefaultServlet {
      * than normal viewing.
      *
      * @param request The servlet request we are processing
+     * @return 
      */
     @Override
     protected String getRelativePath(HttpServletRequest request) {
@@ -415,7 +359,8 @@ public class WebdavServlet extends DefaultServlet {
     }
 
     @Override
-    protected String getRelativePath(HttpServletRequest request, boolean allowEmptyPath) {
+    protected String getRelativePath(HttpServletRequest request, 
+            boolean allowEmptyPath) {
         String pathInfo;
 
         if (request.getAttribute(RequestDispatcher.INCLUDE_REQUEST_URI) != null) {
@@ -439,9 +384,10 @@ public class WebdavServlet extends DefaultServlet {
 
     /**
      * Determines the prefix for standard directory GET listings.
+     * @return 
      */
     @Override
-    protected String getPathPrefix(final HttpServletRequest request) {
+    protected String getPathPrefix(HttpServletRequest request) {
         // Repeat the servlet path (e.g. /webdav/) in the listing path
         String contextPath = request.getContextPath();
         if (request.getServletPath() !=  null) {
@@ -582,7 +528,7 @@ public class WebdavServlet extends DefaultServlet {
 
         WebResource resource = resources.getResource(path);
 
-        if (!resource.exists()) {
+        if (resource==null) {
             int slash = path.lastIndexOf('/');
             if (slash != -1) {
                 String parentPath = path.substring(0, slash);
@@ -616,7 +562,7 @@ public class WebdavServlet extends DefaultServlet {
             }
         }
 
-        if (!resource.exists()) {
+        if (resource==null) {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND, path);
             return;
         }
@@ -651,7 +597,7 @@ public class WebdavServlet extends DefaultServlet {
 
                 resource = resources.getResource(currentPath);
 
-                if (resource.isDirectory() && (depth > 0)) {
+                if (resource!=null && resource.isDirectory() && (depth > 0)) {
 
                     String[] entries = resources.list(currentPath);
                     for (String entry : entries) {
@@ -742,7 +688,7 @@ public class WebdavServlet extends DefaultServlet {
 
         // Can't create a collection if a resource already exists at the given
         // path
-        if (resource.exists()) {
+        if (resource!=null) {
             sendNotAllowed(req, resp);
             return;
         }
@@ -1260,7 +1206,7 @@ public class WebdavServlet extends DefaultServlet {
                     resourceLocks.put(lock.path, lock);
 
                     // Checking if a resource exists at this path
-                    if (!resource.exists()) {
+                    if (resource==null) {
 
                         // "Creating" a lock-null resource
                         int slash = lock.path.lastIndexOf('/');
@@ -1548,7 +1494,7 @@ public class WebdavServlet extends DefaultServlet {
         }
 
         // Remove url encoding from destination
-        destinationPath = UDecoder.URLDecode(destinationPath, StandardCharsets.UTF_8);
+        destinationPath = UDecoder.URLDecode(destinationPath, CS_UTF8);
 
         int protocolIndex = destinationPath.indexOf("://");
         if (protocolIndex >= 0) {
@@ -1637,7 +1583,7 @@ public class WebdavServlet extends DefaultServlet {
 
         if (overwrite) {
             // Delete destination resource, if it exists
-            if (destination.exists()) {
+            if (destination!=null) {
                 if (!deleteResource(destinationPath, req, resp, true)) {
                     return false;
                 }
@@ -1646,7 +1592,7 @@ public class WebdavServlet extends DefaultServlet {
             }
         } else {
             // If the destination exists, then it's a conflict
-            if (destination.exists()) {
+            if (destination!=null) {
                 resp.sendError(WebdavStatus.SC_PRECONDITION_FAILED);
                 return false;
             }
@@ -1668,7 +1614,7 @@ public class WebdavServlet extends DefaultServlet {
         }
 
         // Copy was successful
-        if (destination.exists()) {
+        if (destination!=null) {
             resp.setStatus(WebdavStatus.SC_NO_CONTENT);
         } else {
             resp.setStatus(WebdavStatus.SC_CREATED);
@@ -1724,34 +1670,35 @@ public class WebdavServlet extends DefaultServlet {
             }
         } else if (sourceResource.isFile()) {
             WebResource destResource = resources.getResource(dest);
-            if (!destResource.exists() && !destResource.getWebappPath().endsWith("/")) {
-                int lastSlash = destResource.getWebappPath().lastIndexOf('/');
+            if (destResource==null && !dest.endsWith("/")) {
+                int lastSlash = dest.lastIndexOf('/');
                 if (lastSlash > 0) {
-                    String parent = destResource.getWebappPath().substring(0, lastSlash);
+                    String parent = dest.substring(0, lastSlash);
                     WebResource parentResource = resources.getResource(parent);
-                    if (!parentResource.isDirectory()) {
-                        errorList.put(source, Integer.valueOf(WebdavStatus.SC_CONFLICT));
+                    if (parentResource==null
+                            || !parentResource.isDirectory()) {
+                        errorList.put(source, WebdavStatus.SC_CONFLICT);
                         return false;
                     }
                 }
             }
             // WebDAV Litmus test attempts to copy/move a file over a collection
             // Need to remove trailing / from destination to enable test to pass
-            if (!destResource.exists() && dest.endsWith("/") && dest.length() > 1) {
+            if (destResource==null && dest.endsWith("/") && dest.length() > 1) {
                 // Convert destination name from collection (with trailing '/')
                 // to file (without trailing '/')
                 dest = dest.substring(0, dest.length() - 1);
             }
             try (InputStream is = sourceResource.getInputStream()) {
                 if (!resources.write(dest, is, false)) {
-                    errorList.put(source, Integer.valueOf(WebdavStatus.SC_INTERNAL_SERVER_ERROR));
+                    errorList.put(source, WebdavStatus.SC_INTERNAL_SERVER_ERROR);
                     return false;
                 }
             } catch (IOException e) {
                 log(sm.getString("webdavservlet.inputstreamclosefail", source), e);
             }
         } else {
-            errorList.put(source, Integer.valueOf(WebdavStatus.SC_INTERNAL_SERVER_ERROR));
+            errorList.put(source, WebdavStatus.SC_INTERNAL_SERVER_ERROR);
             return false;
         }
         return true;
@@ -1807,7 +1754,7 @@ public class WebdavServlet extends DefaultServlet {
 
         WebResource resource = resources.getResource(path);
 
-        if (!resource.exists()) {
+        if (resource==null) {
             resp.sendError(WebdavStatus.SC_NOT_FOUND);
             return false;
         }
@@ -1973,7 +1920,7 @@ public class WebdavServlet extends DefaultServlet {
             return;
 
         WebResource resource = resources.getResource(path);
-        if (!resource.exists()) {
+        if (resource==null) {
             // File is in directory listing but doesn't appear to exist
             // Broken symlink or odd permission settings?
             return;
@@ -2325,8 +2272,8 @@ public class WebdavServlet extends DefaultServlet {
     @Override
     protected String determineMethodsAllowed(HttpServletRequest req) {
 
-
-        WebResource resource = resources.getResource(getRelativePath(req));
+        String path = getRelativePath(req);
+        WebResource resource = resources.getResource(path);
 
         // These methods are always allowed. They may return a 404 (not a 405)
         // if the resource does not exist.
@@ -2335,15 +2282,9 @@ public class WebdavServlet extends DefaultServlet {
 
         if (!readOnly) {
             methodsAllowed.append(", DELETE");
-            if (!resource.isDirectory()) {
+            if (!path.endsWith("/")) {
                 methodsAllowed.append(", PUT");
             }
-        }
-
-        // Trace - assume disabled unless we can prove otherwise
-        if (req instanceof RequestFacade &&
-                ((RequestFacade) req).getAllowTrace()) {
-            methodsAllowed.append(", TRACE");
         }
 
         methodsAllowed.append(", LOCK, UNLOCK, PROPPATCH, COPY, MOVE");
@@ -2352,15 +2293,12 @@ public class WebdavServlet extends DefaultServlet {
             methodsAllowed.append(", PROPFIND");
         }
 
-        if (!resource.exists()) {
+        if (resource==null) {
             methodsAllowed.append(", MKCOL");
         }
 
         return methodsAllowed.toString();
     }
-
-
-    // --------------------------------------------------  LockInfo Inner Class
 
     /**
      * Holds a lock information.
@@ -2373,9 +2311,6 @@ public class WebdavServlet extends DefaultServlet {
             this.maxDepth = maxDepth;
         }
 
-
-        // ------------------------------------------------- Instance Variables
-
         private final int maxDepth;
 
         String path = "/";
@@ -2386,9 +2321,6 @@ public class WebdavServlet extends DefaultServlet {
         Vector<String> tokens = new Vector<>();
         long expiresAt = 0;
         Date creationDate = new Date();
-
-
-        // ----------------------------------------------------- Public Methods
 
         /**
          * Get a String representation of this lock token.
@@ -2482,7 +2414,6 @@ public class WebdavServlet extends DefaultServlet {
     }
 
 
-    // --------------------------------------------- WebdavResolver Inner Class
     /**
      * Work around for XML parsers that don't fully respect
      * {@link DocumentBuilderFactory#setExpandEntityReferences(boolean)} when
@@ -2505,325 +2436,3 @@ public class WebdavServlet extends DefaultServlet {
         }
     }
 }
-
-
-// --------------------------------------------------------  WebdavStatus Class
-
-
-/**
- * Wraps the HttpServletResponse class to abstract the
- * specific protocol used.  To support other protocols
- * we would only need to modify this class and the
- * WebDavRetCode classes.
- *
- * @author              Marc Eaddy
- * @version             1.0, 16 Nov 1997
- */
-class WebdavStatus {
-
-
-    // ----------------------------------------------------- Instance Variables
-
-
-    /**
-     * This Hashtable contains the mapping of HTTP and WebDAV
-     * status codes to descriptive text.  This is a static
-     * variable.
-     */
-    private static final Hashtable<Integer,String> mapStatusCodes =
-            new Hashtable<>();
-
-
-    // ------------------------------------------------------ HTTP Status Codes
-
-
-    /**
-     * Status code (200) indicating the request succeeded normally.
-     */
-    public static final int SC_OK = HttpServletResponse.SC_OK;
-
-
-    /**
-     * Status code (201) indicating the request succeeded and created
-     * a new resource on the server.
-     */
-    public static final int SC_CREATED = HttpServletResponse.SC_CREATED;
-
-
-    /**
-     * Status code (202) indicating that a request was accepted for
-     * processing, but was not completed.
-     */
-    public static final int SC_ACCEPTED = HttpServletResponse.SC_ACCEPTED;
-
-
-    /**
-     * Status code (204) indicating that the request succeeded but that
-     * there was no new information to return.
-     */
-    public static final int SC_NO_CONTENT = HttpServletResponse.SC_NO_CONTENT;
-
-
-    /**
-     * Status code (301) indicating that the resource has permanently
-     * moved to a new location, and that future references should use a
-     * new URI with their requests.
-     */
-    public static final int SC_MOVED_PERMANENTLY =
-        HttpServletResponse.SC_MOVED_PERMANENTLY;
-
-
-    /**
-     * Status code (302) indicating that the resource has temporarily
-     * moved to another location, but that future references should
-     * still use the original URI to access the resource.
-     */
-    public static final int SC_MOVED_TEMPORARILY =
-        HttpServletResponse.SC_MOVED_TEMPORARILY;
-
-
-    /**
-     * Status code (304) indicating that a conditional GET operation
-     * found that the resource was available and not modified.
-     */
-    public static final int SC_NOT_MODIFIED =
-        HttpServletResponse.SC_NOT_MODIFIED;
-
-
-    /**
-     * Status code (400) indicating the request sent by the client was
-     * syntactically incorrect.
-     */
-    public static final int SC_BAD_REQUEST =
-        HttpServletResponse.SC_BAD_REQUEST;
-
-
-    /**
-     * Status code (401) indicating that the request requires HTTP
-     * authentication.
-     */
-    public static final int SC_UNAUTHORIZED =
-        HttpServletResponse.SC_UNAUTHORIZED;
-
-
-    /**
-     * Status code (403) indicating the server understood the request
-     * but refused to fulfill it.
-     */
-    public static final int SC_FORBIDDEN = HttpServletResponse.SC_FORBIDDEN;
-
-
-    /**
-     * Status code (404) indicating that the requested resource is not
-     * available.
-     */
-    public static final int SC_NOT_FOUND = HttpServletResponse.SC_NOT_FOUND;
-
-
-    /**
-     * Status code (500) indicating an error inside the HTTP service
-     * which prevented it from fulfilling the request.
-     */
-    public static final int SC_INTERNAL_SERVER_ERROR =
-        HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
-
-
-    /**
-     * Status code (501) indicating the HTTP service does not support
-     * the functionality needed to fulfill the request.
-     */
-    public static final int SC_NOT_IMPLEMENTED =
-        HttpServletResponse.SC_NOT_IMPLEMENTED;
-
-
-    /**
-     * Status code (502) indicating that the HTTP server received an
-     * invalid response from a server it consulted when acting as a
-     * proxy or gateway.
-     */
-    public static final int SC_BAD_GATEWAY =
-        HttpServletResponse.SC_BAD_GATEWAY;
-
-
-    /**
-     * Status code (503) indicating that the HTTP service is
-     * temporarily overloaded, and unable to handle the request.
-     */
-    public static final int SC_SERVICE_UNAVAILABLE =
-        HttpServletResponse.SC_SERVICE_UNAVAILABLE;
-
-
-    /**
-     * Status code (100) indicating the client may continue with
-     * its request.  This interim response is used to inform the
-     * client that the initial part of the request has been
-     * received and has not yet been rejected by the server.
-     */
-    public static final int SC_CONTINUE = 100;
-
-
-    /**
-     * Status code (405) indicating the method specified is not
-     * allowed for the resource.
-     */
-    public static final int SC_METHOD_NOT_ALLOWED = 405;
-
-
-    /**
-     * Status code (409) indicating that the request could not be
-     * completed due to a conflict with the current state of the
-     * resource.
-     */
-    public static final int SC_CONFLICT = 409;
-
-
-    /**
-     * Status code (412) indicating the precondition given in one
-     * or more of the request-header fields evaluated to false
-     * when it was tested on the server.
-     */
-    public static final int SC_PRECONDITION_FAILED = 412;
-
-
-    /**
-     * Status code (413) indicating the server is refusing to
-     * process a request because the request entity is larger
-     * than the server is willing or able to process.
-     */
-    public static final int SC_REQUEST_TOO_LONG = 413;
-
-
-    /**
-     * Status code (415) indicating the server is refusing to service
-     * the request because the entity of the request is in a format
-     * not supported by the requested resource for the requested
-     * method.
-     */
-    public static final int SC_UNSUPPORTED_MEDIA_TYPE = 415;
-
-
-    // -------------------------------------------- Extended WebDav status code
-
-
-    /**
-     * Status code (207) indicating that the response requires
-     * providing status for multiple independent operations.
-     */
-    public static final int SC_MULTI_STATUS = 207;
-    // This one collides with HTTP 1.1
-    // "207 Partial Update OK"
-
-
-    /**
-     * Status code (418) indicating the entity body submitted with
-     * the PATCH method was not understood by the resource.
-     */
-    public static final int SC_UNPROCESSABLE_ENTITY = 418;
-    // This one collides with HTTP 1.1
-    // "418 Reauthentication Required"
-
-
-    /**
-     * Status code (419) indicating that the resource does not have
-     * sufficient space to record the state of the resource after the
-     * execution of this method.
-     */
-    public static final int SC_INSUFFICIENT_SPACE_ON_RESOURCE = 419;
-    // This one collides with HTTP 1.1
-    // "419 Proxy Reauthentication Required"
-
-
-    /**
-     * Status code (420) indicating the method was not executed on
-     * a particular resource within its scope because some part of
-     * the method's execution failed causing the entire method to be
-     * aborted.
-     */
-    public static final int SC_METHOD_FAILURE = 420;
-
-
-    /**
-     * Status code (423) indicating the destination resource of a
-     * method is locked, and either the request did not contain a
-     * valid Lock-Info header, or the Lock-Info header identifies
-     * a lock held by another principal.
-     */
-    public static final int SC_LOCKED = 423;
-
-
-    // ------------------------------------------------------------ Initializer
-
-
-    static {
-        // HTTP 1.0 status Code
-        addStatusCodeMap(SC_OK, "OK");
-        addStatusCodeMap(SC_CREATED, "Created");
-        addStatusCodeMap(SC_ACCEPTED, "Accepted");
-        addStatusCodeMap(SC_NO_CONTENT, "No Content");
-        addStatusCodeMap(SC_MOVED_PERMANENTLY, "Moved Permanently");
-        addStatusCodeMap(SC_MOVED_TEMPORARILY, "Moved Temporarily");
-        addStatusCodeMap(SC_NOT_MODIFIED, "Not Modified");
-        addStatusCodeMap(SC_BAD_REQUEST, "Bad Request");
-        addStatusCodeMap(SC_UNAUTHORIZED, "Unauthorized");
-        addStatusCodeMap(SC_FORBIDDEN, "Forbidden");
-        addStatusCodeMap(SC_NOT_FOUND, "Not Found");
-        addStatusCodeMap(SC_INTERNAL_SERVER_ERROR, "Internal Server Error");
-        addStatusCodeMap(SC_NOT_IMPLEMENTED, "Not Implemented");
-        addStatusCodeMap(SC_BAD_GATEWAY, "Bad Gateway");
-        addStatusCodeMap(SC_SERVICE_UNAVAILABLE, "Service Unavailable");
-        addStatusCodeMap(SC_CONTINUE, "Continue");
-        addStatusCodeMap(SC_METHOD_NOT_ALLOWED, "Method Not Allowed");
-        addStatusCodeMap(SC_CONFLICT, "Conflict");
-        addStatusCodeMap(SC_PRECONDITION_FAILED, "Precondition Failed");
-        addStatusCodeMap(SC_REQUEST_TOO_LONG, "Request Too Long");
-        addStatusCodeMap(SC_UNSUPPORTED_MEDIA_TYPE, "Unsupported Media Type");
-        // WebDav Status Codes
-        addStatusCodeMap(SC_MULTI_STATUS, "Multi-Status");
-        addStatusCodeMap(SC_UNPROCESSABLE_ENTITY, "Unprocessable Entity");
-        addStatusCodeMap(SC_INSUFFICIENT_SPACE_ON_RESOURCE,
-                         "Insufficient Space On Resource");
-        addStatusCodeMap(SC_METHOD_FAILURE, "Method Failure");
-        addStatusCodeMap(SC_LOCKED, "Locked");
-    }
-
-
-    // --------------------------------------------------------- Public Methods
-
-
-    /**
-     * Returns the HTTP status text for the HTTP or WebDav status code
-     * specified by looking it up in the static mapping.  This is a
-     * static function.
-     *
-     * @param   nHttpStatusCode [IN] HTTP or WebDAV status code
-     * @return  A string with a short descriptive phrase for the
-     *                  HTTP status code (e.g., "OK").
-     */
-    public static String getStatusText(int nHttpStatusCode) {
-        Integer intKey = Integer.valueOf(nHttpStatusCode);
-
-        if (!mapStatusCodes.containsKey(intKey)) {
-            return "";
-        } else {
-            return mapStatusCodes.get(intKey);
-        }
-    }
-
-
-    // -------------------------------------------------------- Private Methods
-
-
-    /**
-     * Adds a new status code -> status text mapping.  This is a static
-     * method because the mapping is a static variable.
-     *
-     * @param   nKey    [IN] HTTP or WebDAV status code
-     * @param   strVal  [IN] HTTP status text
-     */
-    private static void addStatusCodeMap(int nKey, String strVal) {
-        mapStatusCodes.put(Integer.valueOf(nKey), strVal);
-    }
-
-}
-
-
