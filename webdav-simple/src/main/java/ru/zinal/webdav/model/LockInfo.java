@@ -16,7 +16,6 @@
 package ru.zinal.webdav.model;
 
 import java.io.Serializable;
-import java.util.Date;
 import java.util.HashSet;
 import ru.zinal.webdav.util.FastHttpDateFormat;
 import ru.zinal.webdav.util.XMLWriter;
@@ -25,23 +24,43 @@ import ru.zinal.webdav.util.XMLWriter;
  *
  * @author zinal
  */
-public class LockInfo implements Serializable {
+public class LockInfo implements Serializable, Cloneable {
 
     private static final long serialVersionUID = 1L;
 
+    private final int maxDepth;
+    private String path;
+    private String type;
+    private String scope;
+    private int depth;
+    private String owner;
+    private final HashSet<String> tokens;
+    private long expiresAt;
+    private long creationDate;
+
     public LockInfo(int maxDepth) {
         this.maxDepth = maxDepth;
+        this.path = "/";
+        this.type = "write";
+        this.scope = "exclusive";
+        this.depth = 0;
+        this.owner = "";
+        this.tokens = new HashSet<>();
+        this.expiresAt = 0;
+        this.creationDate = System.currentTimeMillis();
     }
 
-    private final int maxDepth;
-    private String path = "/";
-    private String type = "write";
-    private String scope = "exclusive";
-    private int depth = 0;
-    private String owner = "";
-    private final HashSet<String> tokens = new HashSet<>();
-    private long expiresAt = 0;
-    private Date creationDate = new Date();
+    public LockInfo(LockInfo li) {
+        this.maxDepth = li.maxDepth;
+        this.path = li.path;
+        this.type = li.type;
+        this.scope = li.scope;
+        this.depth = li.depth;
+        this.owner = li.owner;
+        this.tokens = new HashSet<>(li.tokens);
+        this.expiresAt = li.expiresAt;
+        this.creationDate = li.creationDate;
+    }
 
     public String getPath() {
         return path;
@@ -91,11 +110,11 @@ public class LockInfo implements Serializable {
         this.expiresAt = expiresAt;
     }
 
-    public Date getCreationDate() {
+    public long getCreationDate() {
         return creationDate;
     }
 
-    public void setCreationDate(Date creationDate) {
+    public void setCreationDate(long creationDate) {
         this.creationDate = creationDate;
     }
 
@@ -188,6 +207,11 @@ public class LockInfo implements Serializable {
         generatedXML.writeElement("D", "locktoken", XMLWriter.CLOSING);
 
         generatedXML.writeElement("D", "activelock", XMLWriter.CLOSING);
+    }
+
+    @Override
+    public Object clone() {
+        return new LockInfo(this);
     }
 
 }

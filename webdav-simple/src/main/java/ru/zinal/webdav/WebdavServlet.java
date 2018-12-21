@@ -22,9 +22,11 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Locale;
 import java.util.Stack;
 import java.util.TimeZone;
@@ -434,7 +436,7 @@ public class WebdavServlet extends DefaultServlet {
             path = path.substring(0, path.length() - 1);
 
         // Properties which are to be displayed.
-        Vector<String> properties = null;
+        List<String> properties = null;
         // Propfind depth
         int depth = maxDepth;
         // Propfind type
@@ -518,7 +520,7 @@ public class WebdavServlet extends DefaultServlet {
                         propertyName = nodeName;
                     }
                     // href is a live property which is handled differently
-                    properties.addElement(propertyName);
+                    properties.add(propertyName);
                     break;
                 }
             }
@@ -903,7 +905,7 @@ public class WebdavServlet extends DefaultServlet {
                 lockDuration = MAX_TIMEOUT;
             }
         }
-        lock.setExpiresAt(System.currentTimeMillis() + (lockDuration * 1000));
+        lock.setExpiresAt(lock.getCreationDate() + (lockDuration * 1000));
 
         int lockRequestType = LOCK_CREATION;
 
@@ -1088,7 +1090,8 @@ public class WebdavServlet extends DefaultServlet {
                 while (locksList.hasMoreElements()) {
                     LockInfo currentLock = locksList.nextElement();
                     if (currentLock.hasExpired()) {
-                        resourceLocks.remove(currentLock.getPath());
+                        //resourceLocks.remove(currentLock.getPath());
+                        collectionLocks.remove(currentLock);
                         continue;
                     }
                     if ( (currentLock.getPath().startsWith(lock.getPath())) &&
@@ -1868,7 +1871,7 @@ public class WebdavServlet extends DefaultServlet {
         while (pathList.hasMoreElements()) {
 
             String errorPath = pathList.nextElement();
-            int errorCode = errorList.get(errorPath).intValue();
+            int errorCode = errorList.get(errorPath);
 
             generatedXML.writeElement("D", "response", XMLWriter.OPENING);
 
@@ -1889,10 +1892,9 @@ public class WebdavServlet extends DefaultServlet {
 
         generatedXML.writeElement("D", "multistatus", XMLWriter.CLOSING);
 
-        Writer writer = resp.getWriter();
-        writer.write(generatedXML.toString());
-        writer.close();
-
+        try (Writer writer = resp.getWriter()) {
+            writer.write(generatedXML.toString());
+        }
     }
 
 
@@ -1903,13 +1905,12 @@ public class WebdavServlet extends DefaultServlet {
      * @param generatedXML XML response to the Propfind request
      * @param path Path of the current resource
      * @param type Propfind type
-     * @param propertiesVector If the propfind type is find properties by
+     * @param propNames If the propfind type is find properties by
      * name, then this Vector contains those properties
      */
     private void parseProperties(HttpServletRequest req,
-                                 XMLWriter generatedXML,
-                                 String path, int type,
-                                 Vector<String> propertiesVector) {
+            XMLWriter generatedXML, String path, int type,
+            List<String> propNames) {
 
         // Exclude any resource in the /WEB-INF and /META-INF subdirectories
         if (isSpecialPath(path))
@@ -1932,7 +1933,7 @@ public class WebdavServlet extends DefaultServlet {
 
         String rewrittenUrl = rewriteUrl(href);
 
-        generatePropFindResponse(generatedXML, rewrittenUrl, path, type, propertiesVector,
+        generatePropFindResponse(generatedXML, rewrittenUrl, path, type, propNames,
                 resource.isFile(), false, resource.getCreation(), resource.getLastModified(),
                 resource.getContentLength(), getServletContext().getMimeType(resource.getName()),
                 resource.getETag());
@@ -1946,13 +1947,12 @@ public class WebdavServlet extends DefaultServlet {
      * @param generatedXML XML response to the Propfind request
      * @param path Path of the current resource
      * @param type Propfind type
-     * @param propertiesVector If the propfind type is find properties by
+     * @param propNames If the propfind type is find properties by
      * name, then this Vector contains those properties
      */
     private void parseLockNullProperties(HttpServletRequest req,
-                                         XMLWriter generatedXML,
-                                         String path, int type,
-                                         Vector<String> propertiesVector) {
+            XMLWriter generatedXML, String path, int type,
+            List<String> propNames) {
 
         // Exclude any resource in the /WEB-INF and /META-INF subdirectories
         if (isSpecialPath(path))
@@ -1974,15 +1974,15 @@ public class WebdavServlet extends DefaultServlet {
                 absoluteUri + toAppend));
 
         generatePropFindResponse(generatedXML, rewrittenUrl, 
-                path, type, propertiesVector,
-                true, true, lock.getCreationDate().getTime(), 
-                lock.getCreationDate().getTime(),
+                path, type, propNames,
+                true, true, lock.getCreationDate(), 
+                lock.getCreationDate(),
                 0, "", "");
     }
 
 
     private void generatePropFindResponse(XMLWriter generatedXML, String rewrittenUrl,
-            String path, int propFindType, Vector<String> propertiesVector, boolean isFile,
+            String path, int propFindType, List<String> propNames, boolean isFile,
             boolean isLockNull, long created, long lastModified, long contentLength,
             String contentType, String eTag) {
 
@@ -2083,59 +2083,64 @@ public class WebdavServlet extends DefaultServlet {
 
         case FIND_BY_PROPERTY :
 
-            Vector<String> propertiesNotFound = new Vector<>();
+            List<String> propertiesNotFound = new ArrayList<>();
 
             // Parse the list of properties
 
             generatedXML.writeElement("D", "propstat", XMLWriter.OPENING);
             generatedXML.writeElement("D", "prop", XMLWriter.OPENING);
 
-            Enumeration<String> properties = propertiesVector.elements();
+            for (String property : propNames) {
 
-            while (properties.hasMoreElements()) {
-
-                String property = properties.nextElement();
-
-                if (property.equals("creationdate")) {
-                    generatedXML.writeProperty ("D", "creationdate", getISOCreationDate(created));
-                } else if (property.equals("displayname")) {
+            switch (property) {
+                case "creationdate":
+                    generatedXML.writeProperty ("D", "creationdate", 
+                            getISOCreationDate(created));
+                    break;
+                case "displayname":
                     generatedXML.writeElement("D", "displayname", XMLWriter.OPENING);
                     generatedXML.writeData(resourceName);
                     generatedXML.writeElement("D", "displayname", XMLWriter.CLOSING);
-                } else if (property.equals("getcontentlanguage")) {
+                    break;
+                case "getcontentlanguage":
                     if (isFile) {
                         generatedXML.writeElement("D", "getcontentlanguage",
                                 XMLWriter.NO_CONTENT);
                     } else {
-                        propertiesNotFound.addElement(property);
+                        propertiesNotFound.add(property);
                     }
-                } else if (property.equals("getcontentlength")) {
+                    break;
+                case "getcontentlength":
                     if (isFile) {
                         generatedXML.writeProperty("D", "getcontentlength",
                                 Long.toString(contentLength));
                     } else {
-                        propertiesNotFound.addElement(property);
+                        propertiesNotFound.add(property);
                     }
-                } else if (property.equals("getcontenttype")) {
+                    break;
+                case "getcontenttype":
                     if (isFile) {
                         generatedXML.writeProperty("D", "getcontenttype", contentType);
                     } else {
-                        propertiesNotFound.addElement(property);
+                        propertiesNotFound.add(property);
                     }
-                } else if (property.equals("getetag")) {
+                    break;
+                case "getetag":
                     if (isFile) {
                         generatedXML.writeProperty("D", "getetag", eTag);
                     } else {
-                        propertiesNotFound.addElement(property);
+                        propertiesNotFound.add(property);
                     }
-                } else if (property.equals("getlastmodified")) {
+                    break;
+                case "getlastmodified":
                     if (isFile) {
                         generatedXML.writeProperty("D", "getlastmodified",
                                 FastHttpDateFormat.formatDate(lastModified));
                     } else {
-                        propertiesNotFound.addElement(property);
+                        propertiesNotFound.add(property);
                     }
-                } else if (property.equals("resourcetype")) {
+                    break;
+                case "resourcetype":
                     if (isFile) {
                         if(isLockNull) {
                             generatedXML.writeElement("D", "resourcetype", XMLWriter.OPENING);
@@ -2149,25 +2154,30 @@ public class WebdavServlet extends DefaultServlet {
                         generatedXML.writeElement("D", "collection", XMLWriter.NO_CONTENT);
                         generatedXML.writeElement("D", "resourcetype",XMLWriter.CLOSING);
                     }
-                } else if (property.equals("source")) {
+                    break;
+                case "source":
                     generatedXML.writeProperty("D", "source", "");
-                } else if (property.equals("supportedlock")) {
+                    break;
+                case "supportedlock":
                     supportedLocks = "<D:lockentry>"
-                        + "<D:lockscope><D:exclusive/></D:lockscope>"
-                        + "<D:locktype><D:write/></D:locktype>"
-                        + "</D:lockentry>" + "<D:lockentry>"
-                        + "<D:lockscope><D:shared/></D:lockscope>"
-                        + "<D:locktype><D:write/></D:locktype>"
-                        + "</D:lockentry>";
+                            + "<D:lockscope><D:exclusive/></D:lockscope>"
+                            + "<D:locktype><D:write/></D:locktype>"
+                            + "</D:lockentry>" + "<D:lockentry>"
+                            + "<D:lockscope><D:shared/></D:lockscope>"
+                            + "<D:locktype><D:write/></D:locktype>"
+                            + "</D:lockentry>";
                     generatedXML.writeElement("D", "supportedlock", XMLWriter.OPENING);
                     generatedXML.writeText(supportedLocks);
                     generatedXML.writeElement("D", "supportedlock", XMLWriter.CLOSING);
-                } else if (property.equals("lockdiscovery")) {
+                    break;
+                case "lockdiscovery":
                     if (!generateLockDiscovery(path, generatedXML))
-                        propertiesNotFound.addElement(property);
-                } else {
-                    propertiesNotFound.addElement(property);
-                }
+                        propertiesNotFound.add(property);
+                    break;
+                default:
+                    propertiesNotFound.add(property);
+                    break;
+            }
 
             }
 
@@ -2177,9 +2187,7 @@ public class WebdavServlet extends DefaultServlet {
             generatedXML.writeElement("D", "status", XMLWriter.CLOSING);
             generatedXML.writeElement("D", "propstat", XMLWriter.CLOSING);
 
-            Enumeration<String> propertiesNotFoundList = propertiesNotFound.elements();
-
-            if (propertiesNotFoundList.hasMoreElements()) {
+            if (!propertiesNotFound.isEmpty()) {
 
                 status = "HTTP/1.1 " + WebdavStatus.SC_NOT_FOUND + " " +
                         WebdavStatus.getStatusText(WebdavStatus.SC_NOT_FOUND);
@@ -2187,8 +2195,8 @@ public class WebdavServlet extends DefaultServlet {
                 generatedXML.writeElement("D", "propstat", XMLWriter.OPENING);
                 generatedXML.writeElement("D", "prop", XMLWriter.OPENING);
 
-                while (propertiesNotFoundList.hasMoreElements()) {
-                    generatedXML.writeElement("D", propertiesNotFoundList.nextElement(),
+                for (String propName : propertiesNotFound) {
+                    generatedXML.writeElement("D", propName,
                             XMLWriter.NO_CONTENT);
                 }
 

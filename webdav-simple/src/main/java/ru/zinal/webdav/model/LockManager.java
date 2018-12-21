@@ -15,10 +15,20 @@
  */
 package ru.zinal.webdav.model;
 
+import java.util.List;
+
 /**
  *
  * @author zinal
  */
 public interface LockManager {
+    
+    LockInfo getResourceLock(String path);
+    
+    List<LockInfo> listResourceLocks(String pathPrefix, boolean exclusive);
+
+    LockInfo getCollectionLock(String path);
+    
+    List<LockInfo> listCollectionLocks(String pathPrefix);
     
 }
