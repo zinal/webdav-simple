@@ -13,25 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ru.zinal.webdav;
+package ru.zinal.webdav.model;
+
+import java.io.InputStream;
 
 /**
  *
  * @author zinal
  */
-public class Globals {
+public interface WebResourceRoot {
     
     /**
-     * The WebResourceRoot which is associated with the context. This can be
-     * used to manipulate static files.
+     * Get the resource by path
+     * @param path Path to the resource
+     * @return Resource description, or null of the resource was not found
      */
-    public static final String RESOURCES_ATTR =
-        "org.apache.catalina.resources";
+    WebResource getResource(String path);
 
-    /**
-     * Has security been turned on?
-     */
-    public static final boolean IS_SECURITY_ENABLED =
-        (System.getSecurityManager() != null);
+    String[] list(String path);
 
+    boolean write(String path, InputStream data, boolean overwrite);
+    
 }

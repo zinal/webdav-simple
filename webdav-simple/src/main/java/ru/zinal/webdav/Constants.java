@@ -19,19 +19,8 @@ package ru.zinal.webdav;
  *
  * @author zinal
  */
-public class Globals {
+public class Constants {
     
-    /**
-     * The WebResourceRoot which is associated with the context. This can be
-     * used to manipulate static files.
-     */
-    public static final String RESOURCES_ATTR =
-        "org.apache.catalina.resources";
-
-    /**
-     * Has security been turned on?
-     */
-    public static final boolean IS_SECURITY_ENABLED =
-        (System.getSecurityManager() != null);
-
+    public static final String Package = "ru.zinal.webdav";
+    
 }

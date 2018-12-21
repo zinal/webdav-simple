@@ -139,7 +139,7 @@ public final class FastHttpDateFormat {
         for (int i = 0; (date == -1) && (i < httpParseFormats.length); i++) {
             try {
                 date = httpParseFormats[i].parse(value).getTime();
-                updateParseCache(value, Long.valueOf(date));
+                updateParseCache(value, date);
             } catch (ParseException e) {
                 // Ignore
             }
