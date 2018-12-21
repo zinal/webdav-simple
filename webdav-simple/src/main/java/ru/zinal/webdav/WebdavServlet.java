@@ -18,7 +18,6 @@ package ru.zinal.webdav;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.Serializable;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.Writer;
@@ -865,12 +864,12 @@ public class WebdavServlet extends DefaultServlet {
         String depthStr = req.getHeader("Depth");
 
         if (depthStr == null) {
-            lock.depth = maxDepth;
+            lock.setDepth(maxDepth);
         } else {
             if (depthStr.equals("0")) {
-                lock.depth = 0;
+                lock.setDepth(0);
             } else {
-                lock.depth = maxDepth;
+                lock.setDepth(maxDepth);
             }
         }
 
@@ -878,9 +877,7 @@ public class WebdavServlet extends DefaultServlet {
 
         int lockDuration = DEFAULT_TIMEOUT;
         String lockDurationStr = req.getHeader("Timeout");
-        if (lockDurationStr == null) {
-            lockDuration = DEFAULT_TIMEOUT;
-        } else {
+        if (lockDurationStr != null) {
             int commaPos = lockDurationStr.indexOf(',');
             // If multiple timeouts, just use the first
             if (commaPos != -1) {
@@ -906,7 +903,7 @@ public class WebdavServlet extends DefaultServlet {
                 lockDuration = MAX_TIMEOUT;
             }
         }
-        lock.expiresAt = System.currentTimeMillis() + (lockDuration * 1000);
+        lock.setExpiresAt(System.currentTimeMillis() + (lockDuration * 1000));
 
         int lockRequestType = LOCK_CREATION;
 
@@ -969,17 +966,17 @@ public class WebdavServlet extends DefaultServlet {
                         break;
                     case Node.ELEMENT_NODE:
                         String tempScope = currentNode.getNodeName();
-                        if (tempScope.indexOf(':') != -1) {
-                            lock.scope = tempScope.substring
-                                (tempScope.indexOf(':') + 1);
+                        int semiIndex = tempScope.indexOf(':');
+                        if (semiIndex != -1) {
+                            lock.setScope(tempScope.substring(semiIndex + 1));
                         } else {
-                            lock.scope = tempScope;
+                            lock.setScope(tempScope);
                         }
                         break;
                     }
                 }
 
-                if (lock.scope == null) {
+                if (lock.getScope() == null) {
                     // Bad request
                     resp.setStatus(WebdavStatus.SC_BAD_REQUEST);
                 }
@@ -999,17 +996,17 @@ public class WebdavServlet extends DefaultServlet {
                         break;
                     case Node.ELEMENT_NODE:
                         String tempType = currentNode.getNodeName();
-                        if (tempType.indexOf(':') != -1) {
-                            lock.type =
-                                tempType.substring(tempType.indexOf(':') + 1);
+                        int semiIndex = tempType.indexOf(':');
+                        if (semiIndex != -1) {
+                            lock.setType(tempType.substring(semiIndex + 1));
                         } else {
-                            lock.type = tempType;
+                            lock.setType(tempType);
                         }
                         break;
                     }
                 }
 
-                if (lock.type == null) {
+                if (lock.getType() == null) {
                     // Bad request
                     resp.setStatus(WebdavStatus.SC_BAD_REQUEST);
                 }
@@ -1020,54 +1017,67 @@ public class WebdavServlet extends DefaultServlet {
             }
 
             if (lockOwnerNode != null) {
+                
+                final StringBuilder lockOwner = new StringBuilder();
 
                 childList = lockOwnerNode.getChildNodes();
                 for (int i=0; i < childList.getLength(); i++) {
                     Node currentNode = childList.item(i);
                     switch (currentNode.getNodeType()) {
                     case Node.TEXT_NODE:
-                        lock.owner += currentNode.getNodeValue();
+                        lockOwner.append(currentNode.getNodeValue());
                         break;
                     case Node.ELEMENT_NODE:
                         strWriter = new StringWriter();
                         domWriter = new DOMWriter(strWriter);
                         domWriter.print(currentNode);
-                        lock.owner += strWriter.toString();
+                        lockOwner.append(strWriter.toString());
                         break;
                     }
                 }
-
-                if (lock.owner == null) {
+                
+                if (lockOwner.length()==0) {
                     // Bad request
                     resp.setStatus(WebdavStatus.SC_BAD_REQUEST);
+                } else {
+                    lock.setOwner(lockOwner.toString());
                 }
 
             } else {
-                lock.owner = "";
+                lock.setOwner("");
             }
 
         }
 
         String path = getRelativePath(req);
 
-        lock.path = path;
+        lock.setPath(path);
 
         WebResource resource = resources.getResource(path);
+        
+        final boolean isDirectory = (resource!=null) ?
+                resource.isDirectory() :
+                path.endsWith("/");
 
         Enumeration<LockInfo> locksList = null;
 
         if (lockRequestType == LOCK_CREATION) {
 
             // Generating lock id
-            String lockTokenStr = req.getServletPath() + "-" + lock.type + "-"
-                + lock.scope + "-" + req.getUserPrincipal() + "-"
-                + lock.depth + "-" + lock.owner + "-" + lock.tokens + "-"
-                + lock.expiresAt + "-" + System.currentTimeMillis() + "-"
-                + secret;
-            String lockToken = MD5Encoder.encode(ConcurrentMessageDigest.digestMD5(
-                    lockTokenStr.getBytes(StandardCharsets.ISO_8859_1)));
+            final byte[] lockTokenData = (req.getServletPath() 
+                    + "-" + lock.getType()
+                    + "-" + lock.getScope()
+                    + "-" + req.getUserPrincipal()
+                    + "-" + lock.getDepth()
+                    + "-" + lock.getOwner()
+                    + "-" + lock.getExpiresAt()
+                    + "-" + System.currentTimeMillis()
+                    + "-" + secret) 
+                    .getBytes(StandardCharsets.ISO_8859_1);
+            String lockToken = MD5Encoder.encode(
+                    ConcurrentMessageDigest.digestMD5(lockTokenData));
 
-            if (resource.isDirectory() && lock.depth == maxDepth) {
+            if (isDirectory && lock.getDepth() == maxDepth) {
 
                 // Locking a collection (and all its member resources)
 
@@ -1078,28 +1088,28 @@ public class WebdavServlet extends DefaultServlet {
                 while (locksList.hasMoreElements()) {
                     LockInfo currentLock = locksList.nextElement();
                     if (currentLock.hasExpired()) {
-                        resourceLocks.remove(currentLock.path);
+                        resourceLocks.remove(currentLock.getPath());
                         continue;
                     }
-                    if ( (currentLock.path.startsWith(lock.path)) &&
+                    if ( (currentLock.getPath().startsWith(lock.getPath())) &&
                          ((currentLock.isExclusive()) ||
                           (lock.isExclusive())) ) {
                         // A child collection of this collection is locked
-                        lockPaths.addElement(currentLock.path);
+                        lockPaths.addElement(currentLock.getPath());
                     }
                 }
                 locksList = resourceLocks.elements();
                 while (locksList.hasMoreElements()) {
                     LockInfo currentLock = locksList.nextElement();
                     if (currentLock.hasExpired()) {
-                        resourceLocks.remove(currentLock.path);
+                        resourceLocks.remove(currentLock.getPath());
                         continue;
                     }
-                    if ( (currentLock.path.startsWith(lock.path)) &&
+                    if ( (currentLock.getPath().startsWith(lock.getPath())) &&
                          ((currentLock.isExclusive()) ||
                           (lock.isExclusive())) ) {
                         // A child resource of this collection is locked
-                        lockPaths.addElement(currentLock.path);
+                        lockPaths.addElement(currentLock.getPath());
                     }
                 }
 
@@ -1142,9 +1152,9 @@ public class WebdavServlet extends DefaultServlet {
                     generatedXML.writeElement("D", "multistatus",
                             XMLWriter.CLOSING);
 
-                    Writer writer = resp.getWriter();
-                    writer.write(generatedXML.toString());
-                    writer.close();
+                    try (Writer writer = resp.getWriter()) {
+                        writer.write(generatedXML.toString());
+                    }
 
                     return;
 
@@ -1157,7 +1167,7 @@ public class WebdavServlet extends DefaultServlet {
                 while (locksList.hasMoreElements()) {
 
                     LockInfo currentLock = locksList.nextElement();
-                    if (currentLock.path.equals(lock.path)) {
+                    if (currentLock.getPath().equals(lock.getPath())) {
 
                         if (currentLock.isExclusive()) {
                             resp.sendError(WebdavStatus.SC_LOCKED);
@@ -1169,7 +1179,7 @@ public class WebdavServlet extends DefaultServlet {
                             }
                         }
 
-                        currentLock.tokens.addElement(lockToken);
+                        currentLock.getTokens().add(lockToken);
                         lock = currentLock;
                         addLock = false;
 
@@ -1178,7 +1188,7 @@ public class WebdavServlet extends DefaultServlet {
                 }
 
                 if (addLock) {
-                    lock.tokens.addElement(lockToken);
+                    lock.getTokens().add(lockToken);
                     collectionLocks.addElement(lock);
                 }
 
@@ -1187,7 +1197,7 @@ public class WebdavServlet extends DefaultServlet {
                 // Locking a single resource
 
                 // Retrieving an already existing lock on that resource
-                LockInfo presentLock = resourceLocks.get(lock.path);
+                LockInfo presentLock = resourceLocks.get(lock.getPath());
                 if (presentLock != null) {
 
                     if ((presentLock.isExclusive()) || (lock.isExclusive())) {
@@ -1196,21 +1206,21 @@ public class WebdavServlet extends DefaultServlet {
                         resp.sendError(WebdavStatus.SC_PRECONDITION_FAILED);
                         return;
                     } else {
-                        presentLock.tokens.addElement(lockToken);
+                        presentLock.getTokens().add(lockToken);
                         lock = presentLock;
                     }
 
                 } else {
 
-                    lock.tokens.addElement(lockToken);
-                    resourceLocks.put(lock.path, lock);
+                    lock.getTokens().add(lockToken);
+                    resourceLocks.put(lock.getPath(), lock);
 
                     // Checking if a resource exists at this path
                     if (resource==null) {
 
                         // "Creating" a lock-null resource
-                        int slash = lock.path.lastIndexOf('/');
-                        String parentPath = lock.path.substring(0, slash);
+                        int slash = lock.getPath().lastIndexOf('/');
+                        String parentPath = lock.getPath().substring(0, slash);
 
                         Vector<String> lockNulls =
                             lockNullResources.get(parentPath);
@@ -1219,7 +1229,7 @@ public class WebdavServlet extends DefaultServlet {
                             lockNullResources.put(parentPath, lockNulls);
                         }
 
-                        lockNulls.addElement(lock.path);
+                        lockNulls.addElement(lock.getPath());
 
                     }
                     // Add the Lock-Token header as by RFC 2518 8.10.1
@@ -1241,15 +1251,12 @@ public class WebdavServlet extends DefaultServlet {
             // Checking resource locks
 
             LockInfo toRenew = resourceLocks.get(path);
-            Enumeration<String> tokenList = null;
 
             if (toRenew != null) {
                 // At least one of the tokens of the locks must have been given
-                tokenList = toRenew.tokens.elements();
-                while (tokenList.hasMoreElements()) {
-                    String token = tokenList.nextElement();
+                for (String token : toRenew.getTokens()) {
                     if (ifHeader.contains(token)) {
-                        toRenew.expiresAt = lock.expiresAt;
+                        toRenew.setExpiresAt(lock.getExpiresAt());
                         lock = toRenew;
                     }
                 }
@@ -1261,13 +1268,11 @@ public class WebdavServlet extends DefaultServlet {
                 collectionLocks.elements();
             while (collectionLocksList.hasMoreElements()) {
                 toRenew = collectionLocksList.nextElement();
-                if (path.equals(toRenew.path)) {
+                if (path.equals(toRenew.getPath())) {
 
-                    tokenList = toRenew.tokens.elements();
-                    while (tokenList.hasMoreElements()) {
-                        String token = tokenList.nextElement();
+                    for (String token : toRenew.getTokens()) {
                         if (ifHeader.contains(token)) {
-                            toRenew.expiresAt = lock.expiresAt;
+                            toRenew.setExpiresAt(lock.getExpiresAt());
                             lock = toRenew;
                         }
                     }
@@ -1294,9 +1299,9 @@ public class WebdavServlet extends DefaultServlet {
 
         resp.setStatus(WebdavStatus.SC_OK);
         resp.setContentType("text/xml; charset=UTF-8");
-        Writer writer = resp.getWriter();
-        writer.write(generatedXML.toString());
-        writer.close();
+        try (Writer writer = resp.getWriter()) {
+            writer.write(generatedXML.toString());
+        }
 
     }
 
@@ -1329,20 +1334,17 @@ public class WebdavServlet extends DefaultServlet {
         // Checking resource locks
 
         LockInfo lock = resourceLocks.get(path);
-        Enumeration<String> tokenList = null;
         if (lock != null) {
 
             // At least one of the tokens of the locks must have been given
 
-            tokenList = lock.tokens.elements();
-            while (tokenList.hasMoreElements()) {
-                String token = tokenList.nextElement();
+            for (String token : lock.getTokens()) {
                 if (lockTokenHeader.contains(token)) {
-                    lock.tokens.removeElement(token);
+                    lock.getTokens().remove(token);
                 }
             }
 
-            if (lock.tokens.isEmpty()) {
+            if (lock.getTokens().isEmpty()) {
                 resourceLocks.remove(path);
                 // Removing any lock-null resource which would be present
                 lockNullResources.remove(path);
@@ -1355,18 +1357,16 @@ public class WebdavServlet extends DefaultServlet {
         Enumeration<LockInfo> collectionLocksList = collectionLocks.elements();
         while (collectionLocksList.hasMoreElements()) {
             lock = collectionLocksList.nextElement();
-            if (path.equals(lock.path)) {
+            if (path.equals(lock.getPath())) {
 
-                tokenList = lock.tokens.elements();
-                while (tokenList.hasMoreElements()) {
-                    String token = tokenList.nextElement();
+                for (String token : lock.getTokens()) {
                     if (lockTokenHeader.contains(token)) {
-                        lock.tokens.removeElement(token);
+                        lock.getTokens().remove(token);
                         break;
                     }
                 }
 
-                if (lock.tokens.isEmpty()) {
+                if (lock.getTokens().isEmpty()) {
                     collectionLocks.removeElement(lock);
                     // Removing any lock-null resource which would be present
                     lockNullResources.remove(path);
@@ -1429,10 +1429,8 @@ public class WebdavServlet extends DefaultServlet {
 
             // At least one of the tokens of the locks must have been given
 
-            tokenList = lock.tokens.elements();
             boolean tokenMatch = false;
-            while (tokenList.hasMoreElements()) {
-                String token = tokenList.nextElement();
+            for (String token : lock.getTokens()) {
                 if (ifHeader.contains(token)) {
                     tokenMatch = true;
                     break;
@@ -1450,12 +1448,10 @@ public class WebdavServlet extends DefaultServlet {
             lock = collectionLocksList.nextElement();
             if (lock.hasExpired()) {
                 collectionLocks.removeElement(lock);
-            } else if (path.startsWith(lock.path)) {
+            } else if (path.startsWith(lock.getPath())) {
 
-                tokenList = lock.tokens.elements();
                 boolean tokenMatch = false;
-                while (tokenList.hasMoreElements()) {
-                    String token = tokenList.nextElement();
+                for (String token : lock.getTokens()) {
                     if (ifHeader.contains(token)) {
                         tokenMatch = true;
                         break;
@@ -1977,8 +1973,10 @@ public class WebdavServlet extends DefaultServlet {
         String rewrittenUrl = rewriteUrl(RequestUtil.normalize(
                 absoluteUri + toAppend));
 
-        generatePropFindResponse(generatedXML, rewrittenUrl, path, type, propertiesVector,
-                true, true, lock.creationDate.getTime(), lock.creationDate.getTime(),
+        generatePropFindResponse(generatedXML, rewrittenUrl, 
+                path, type, propertiesVector,
+                true, true, lock.getCreationDate().getTime(), 
+                lock.getCreationDate().getTime(),
                 0, "", "");
     }
 
@@ -2233,7 +2231,7 @@ public class WebdavServlet extends DefaultServlet {
 
         while (collectionLocksList.hasMoreElements()) {
             LockInfo currentLock = collectionLocksList.nextElement();
-            if (path.startsWith(currentLock.path)) {
+            if (path.startsWith(currentLock.getPath())) {
                 if (!wroteStart) {
                     wroteStart = true;
                     generatedXML.writeElement("D", "lockdiscovery",
@@ -2299,120 +2297,6 @@ public class WebdavServlet extends DefaultServlet {
 
         return methodsAllowed.toString();
     }
-
-    /**
-     * Holds a lock information.
-     */
-    private static class LockInfo implements Serializable {
-
-        private static final long serialVersionUID = 1L;
-
-        public LockInfo(int maxDepth) {
-            this.maxDepth = maxDepth;
-        }
-
-        private final int maxDepth;
-
-        String path = "/";
-        String type = "write";
-        String scope = "exclusive";
-        int depth = 0;
-        String owner = "";
-        Vector<String> tokens = new Vector<>();
-        long expiresAt = 0;
-        Date creationDate = new Date();
-
-        /**
-         * Get a String representation of this lock token.
-         */
-        @Override
-        public String toString() {
-
-            StringBuilder result =  new StringBuilder("Type:");
-            result.append(type);
-            result.append("\nScope:");
-            result.append(scope);
-            result.append("\nDepth:");
-            result.append(depth);
-            result.append("\nOwner:");
-            result.append(owner);
-            result.append("\nExpiration:");
-            result.append(FastHttpDateFormat.formatDate(expiresAt));
-            Enumeration<String> tokensList = tokens.elements();
-            while (tokensList.hasMoreElements()) {
-                result.append("\nToken:");
-                result.append(tokensList.nextElement());
-            }
-            result.append("\n");
-            return result.toString();
-        }
-
-
-        /**
-         * @return true if the lock has expired.
-         */
-        public boolean hasExpired() {
-            return System.currentTimeMillis() > expiresAt;
-        }
-
-
-        /**
-         * @return true if the lock is exclusive.
-         */
-        public boolean isExclusive() {
-            return scope.equals("exclusive");
-        }
-
-
-        /**
-         * Get an XML representation of this lock token.
-         *
-         * @param generatedXML The XML write to which the fragment will be
-         *                     appended
-         */
-        public void toXML(XMLWriter generatedXML) {
-
-            generatedXML.writeElement("D", "activelock", XMLWriter.OPENING);
-
-            generatedXML.writeElement("D", "locktype", XMLWriter.OPENING);
-            generatedXML.writeElement("D", type, XMLWriter.NO_CONTENT);
-            generatedXML.writeElement("D", "locktype", XMLWriter.CLOSING);
-
-            generatedXML.writeElement("D", "lockscope", XMLWriter.OPENING);
-            generatedXML.writeElement("D", scope, XMLWriter.NO_CONTENT);
-            generatedXML.writeElement("D", "lockscope", XMLWriter.CLOSING);
-
-            generatedXML.writeElement("D", "depth", XMLWriter.OPENING);
-            if (depth == maxDepth) {
-                generatedXML.writeText("Infinity");
-            } else {
-                generatedXML.writeText("0");
-            }
-            generatedXML.writeElement("D", "depth", XMLWriter.CLOSING);
-
-            generatedXML.writeElement("D", "owner", XMLWriter.OPENING);
-            generatedXML.writeText(owner);
-            generatedXML.writeElement("D", "owner", XMLWriter.CLOSING);
-
-            generatedXML.writeElement("D", "timeout", XMLWriter.OPENING);
-            long timeout = (expiresAt - System.currentTimeMillis()) / 1000;
-            generatedXML.writeText("Second-" + timeout);
-            generatedXML.writeElement("D", "timeout", XMLWriter.CLOSING);
-
-            generatedXML.writeElement("D", "locktoken", XMLWriter.OPENING);
-            Enumeration<String> tokensList = tokens.elements();
-            while (tokensList.hasMoreElements()) {
-                generatedXML.writeElement("D", "href", XMLWriter.OPENING);
-                generatedXML.writeText("opaquelocktoken:"
-                                       + tokensList.nextElement());
-                generatedXML.writeElement("D", "href", XMLWriter.CLOSING);
-            }
-            generatedXML.writeElement("D", "locktoken", XMLWriter.CLOSING);
-
-            generatedXML.writeElement("D", "activelock", XMLWriter.CLOSING);
-        }
-    }
-
 
     /**
      * Work around for XML parsers that don't fully respect
