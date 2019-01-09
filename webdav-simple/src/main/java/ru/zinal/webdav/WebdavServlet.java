@@ -552,7 +552,7 @@ public class WebdavServlet extends DefaultServlet {
 
                 if (resource!=null && resource.isDirectory() && (depth > 0)) {
                     // List directory entries, and add those to stack
-                    String[] entries = resources.list(currentPath);
+                    List<String> entries = resource.list();
                     for (String entry : entries) {
                         String newPath = currentPath;
                         if (!(newPath.endsWith("/")))
@@ -1356,7 +1356,7 @@ public class WebdavServlet extends DefaultServlet {
                 }
             }
 
-            String[] entries = resources.list(source);
+            List<String> entries = sourceResource.list();
             for (String entry : entries) {
                 String childDest = dest;
                 if (!childDest.equals("/")) {
@@ -1392,7 +1392,7 @@ public class WebdavServlet extends DefaultServlet {
                 dest = dest.substring(0, dest.length() - 1);
             }
             try (InputStream is = sourceResource.getInputStream()) {
-                if (!resources.write(dest, is, false)) {
+                if (resources.write(dest, is, false) == null) {
                     errorList.put(source, WebdavStatus.SC_INTERNAL_SERVER_ERROR);
                     return false;
                 }
@@ -1505,8 +1505,12 @@ public class WebdavServlet extends DefaultServlet {
         String[] tokens = new String[2];
         tokens[0] = SmallT.extractToken( req.getHeader("If") );
         tokens[1] = SmallT.extractToken( req.getHeader("Lock-Token") );
+        
+        WebResource resource = resources.getResource(path);
+        if (resource==null)
+            return; // nothing to delete
 
-        String[] entries = resources.list(path);
+        List<String> entries = resource.list();
 
         for (String entry : entries) {
             String childName = path;

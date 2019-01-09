@@ -36,6 +36,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.AccessController;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 import java.util.StringTokenizer;
 
@@ -447,7 +448,7 @@ public class DefaultServlet extends HttpServlet {
                 resourceInputStream = req.getInputStream();
             }
 
-            if (resources.write(path, resourceInputStream, true)) {
+            if (resources.write(path, resourceInputStream, true) != null) {
                 if (resource!=null) {
                     resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
                 } else {
@@ -1151,11 +1152,11 @@ public class DefaultServlet extends HttpServlet {
 
         sb.append("<entries>");
 
-        String[] entries = resources.list(resource.getWebappPath());
+        List<String> entries = resource.list();
 
         // rewriteUrl(contextPath) is expensive. cache result for later reuse
         String rewrittenContextPath =  rewriteUrl(contextPath);
-        String directoryWebappPath = resource.getWebappPath();
+        String directoryWebappPath = resource.getPath();
 
         for (String entry : entries) {
 
@@ -1271,11 +1272,11 @@ public class DefaultServlet extends HttpServlet {
 
         StringBuilder sb = new StringBuilder();
 
-        String[] entries = resources.list(resource.getWebappPath());
+        List<String> entries = resource.list();
 
         // rewriteUrl(contextPath) is expensive. cache result for later reuse
         String rewrittenContextPath =  rewriteUrl(contextPath);
-        String directoryWebappPath = resource.getWebappPath();
+        String directoryWebappPath = resource.getPath();
 
         // Render the page header
         sb.append("<html>\r\n");
@@ -1426,7 +1427,7 @@ public class DefaultServlet extends HttpServlet {
 
         if (readmeFile != null) {
             WebResource resource = resources.getResource(
-                    directory.getWebappPath() + readmeFile);
+                    directory.getPath() + readmeFile);
             if (resource.isFile()) {
                 StringWriter buffer = new StringWriter();
                 InputStreamReader reader;
@@ -1463,7 +1464,7 @@ public class DefaultServlet extends HttpServlet {
 
         if (localXsltFile != null) {
             WebResource resource = resources.getResource(
-                    directory.getWebappPath() + localXsltFile);
+                    directory.getPath() + localXsltFile);
             if (resource.isFile()) {
                 InputStream is = resource.getInputStream();
                 if (is != null) {

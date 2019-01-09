@@ -16,6 +16,7 @@
 package ru.zinal.webdav.model;
 
 import java.io.InputStream;
+import java.util.List;
 import ru.zinal.webdav.WebdavContext;
 
 /**
@@ -34,18 +35,11 @@ public interface WebResourceRoot {
     /**
      * 
      * @param path
-     * @return 
-     */
-    String[] list(String path);
-
-    /**
-     * 
-     * @param path
      * @param data
      * @param overwrite
      * @return 
      */
-    boolean write(String path, InputStream data, boolean overwrite);
+    WebResource write(String path, InputStream data, boolean overwrite);
 
     /**
      * 

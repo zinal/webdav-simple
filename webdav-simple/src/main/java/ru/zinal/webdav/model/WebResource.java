@@ -23,11 +23,17 @@ import java.io.InputStream;
  */
 public abstract class WebResource implements GenericResource {
 
-    public String getLastModifiedHttp() {
+    @Override
+    public String getName() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public String getWebappPath() {
+    @Override
+    public String getPath() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public String getLastModifiedHttp() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -40,10 +46,6 @@ public abstract class WebResource implements GenericResource {
     }
 
     public String getMimeType() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    public boolean delete() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
     

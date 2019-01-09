@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
+import ru.zinal.webdav.util.*;
 
 /**
  *
@@ -42,7 +43,7 @@ public class InMemoryLocker implements LockManager {
 
     @Override
     public LockResult createLock(LockInfo lock) {
-        final String[] entryPath = LockEntry.splitPath(lock.getPath());
+        final String[] entryPath = SmallT.splitPath(lock.getPath());
         synchronized(this) {
             cleanupExpired();
             // 1. Checking the upper-level locks
@@ -289,7 +290,7 @@ public class InMemoryLocker implements LockManager {
         }
 
         public LockRecord find(String path) {
-            return find(LockEntry.splitPath(path));
+            return find(SmallT.splitPath(path));
         }
 
         public LockRecord find(String[] path) {
@@ -303,7 +304,7 @@ public class InMemoryLocker implements LockManager {
         }
 
         public LockRecord traverse(String path) {
-            return traverse(LockEntry.splitPath(path));
+            return traverse(SmallT.splitPath(path));
         }
         
         public LockRecord traverse(String[] path) {
@@ -318,7 +319,7 @@ public class InMemoryLocker implements LockManager {
         }
         
         public LockRecord create(String path) {
-            return create(LockEntry.splitPath(path));
+            return create(SmallT.splitPath(path));
         }
 
         public LockRecord create(String[] path) {

@@ -35,5 +35,34 @@ public class SmallT {
             throw new IllegalArgumentException("Illegal token data: " + value);
         return m.group(1);
     }
+
+    public static String normalizePath(String path) {
+        if (path==null)
+            return "/";
+        path = path.trim().replace('\\', '/');
+        int oldlen;
+        int newlen = path.length();
+        do {
+            oldlen = newlen;
+            path = path.replace("//", "/");
+            newlen = path.length();
+        } while (oldlen != newlen);
+        if (!path.startsWith("/")) {
+            return "/" + path;
+        }
+        return path;
+    }
+
+    public static String[] splitPath(String path) {
+        path = normalizePath(path);
+        if ("/".equals(path)) {
+            return new String[0];
+        }
+        if (path.endsWith("/")) {
+            return path.substring(1, path.length() - 1).split("[/]");
+        } else {
+            return path.substring(1, path.length()).split("[/]");
+        }
+    }
     
 }

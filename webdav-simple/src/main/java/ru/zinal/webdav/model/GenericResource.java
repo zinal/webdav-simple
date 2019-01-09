@@ -31,6 +31,12 @@ public interface GenericResource {
     String getName();
     
     /**
+     * Get the path to the resource
+     * @return Path to the resource, from the web base root
+     */
+    String getPath();
+    
+    /**
      * Check if the resource is the file
      * @return true, if the resource is a file, and false for collections
      */

@@ -15,10 +15,53 @@
  */
 package ru.zinal.webdav.fs;
 
+import java.io.InputStream;
+import ru.zinal.webdav.model.*;
+
 /**
  *
  * @author zinal
  */
-public class FsFile {
+public class FsFile extends WebFile {
+
+    @Override
+    public long getCreation() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public long getLastModified() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public long getContentLength() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public InputStream getData() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public InputStream getData(long start, long finish) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void replaceData(InputStream data) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void replaceData(InputStream data, long start, long totalSize) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean delete() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
     
 }

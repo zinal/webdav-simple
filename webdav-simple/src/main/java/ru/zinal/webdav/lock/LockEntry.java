@@ -16,6 +16,7 @@
 package ru.zinal.webdav.lock;
 
 import java.util.HashMap;
+import ru.zinal.webdav.util.SmallT;
 
 /**
  *
@@ -33,7 +34,7 @@ public class LockEntry {
     private boolean lockNull;
 
     public LockEntry(LockInfo li) {
-        this.path = normalizePath(li.getPath());
+        this.path = SmallT.normalizePath(li.getPath());
         this.type = li.getType();
         this.scope = li.getScope();
         this.depth = li.getDepth();
@@ -117,30 +118,6 @@ public class LockEntry {
      */
     public boolean isExclusive() {
         return scope.equals("exclusive");
-    }
-
-    public static String normalizePath(String path) {
-        path = path.trim().replace('\\', '/');
-        int oldlen, newlen = path.length();
-        do {
-            oldlen = newlen;
-            path = path.replace("//", "/");
-            newlen = path.length();
-        } while (oldlen!=newlen);
-        if (!path.startsWith("/"))
-            return "/" + path;
-        return path;
-    }
-
-    public static String[] splitPath(String path) {
-        path = normalizePath(path);
-        if ("/".equals(path))
-            return new String[0];
-        if (path.endsWith("/")) {
-            return path.substring(1, path.length()-1).split("[/]");
-        } else {
-            return path.substring(1, path.length()).split("[/]");
-        }
     }
 
 }

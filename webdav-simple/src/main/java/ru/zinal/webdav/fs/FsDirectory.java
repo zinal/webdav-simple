@@ -15,6 +15,7 @@
  */
 package ru.zinal.webdav.fs;
 
+import java.io.File;
 import java.io.InputStream;
 import java.util.List;
 import ru.zinal.webdav.model.*;
@@ -24,32 +25,33 @@ import ru.zinal.webdav.model.*;
  * @author zinal
  */
 public class FsDirectory extends WebDirectory {
-
-    @Override
-    public String getName() {
-        throw new UnsupportedOperationException("Not supported yet.");
+    
+    private final File file;
+    
+    public FsDirectory(File file) {
+        this.file = file;
     }
-
+    
     @Override
     public long getCreation() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-
+    
     @Override
     public long getLastModified() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-
+    
     @Override
     public WebResource lookup(String name) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-
+    
     @Override
     public WebResource createDirectory(String name) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-
+    
     @Override
     public WebResource createFile(String name, InputStream data) {
         throw new UnsupportedOperationException("Not supported yet.");
@@ -62,6 +64,11 @@ public class FsDirectory extends WebDirectory {
 
     @Override
     public List<String> list() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean delete() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
     

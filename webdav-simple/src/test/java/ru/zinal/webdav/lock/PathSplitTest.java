@@ -42,19 +42,19 @@ public class PathSplitTest {
     @Test
     public void pathSplitTest() {
         String[] result;
-        result = LockEntry.splitPath("/");
+        result = SmallT.splitPath("/");
         assertArrayEquals(new String[] {}, result);
-        result = LockEntry.splitPath("/////");
+        result = SmallT.splitPath("/////");
         assertArrayEquals(new String[] {}, result);
-        result = LockEntry.splitPath("a/b");
+        result = SmallT.splitPath("a/b");
         assertArrayEquals(new String[] {"a", "b"}, result);
-        result = LockEntry.splitPath("/a/b");
+        result = SmallT.splitPath("/a/b");
         assertArrayEquals(new String[] {"a", "b"}, result);
-        result = LockEntry.splitPath("/a/b/");
+        result = SmallT.splitPath("/a/b/");
         assertArrayEquals(new String[] {"a", "b"}, result);
-        result = LockEntry.splitPath("x");
+        result = SmallT.splitPath("x");
         assertArrayEquals(new String[] {"x"}, result);
-        result = LockEntry.splitPath("y///");
+        result = SmallT.splitPath("y///");
         assertArrayEquals(new String[] {"y"}, result);
     }
 
