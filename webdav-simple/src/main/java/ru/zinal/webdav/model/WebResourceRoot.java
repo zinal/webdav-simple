@@ -31,12 +31,33 @@ public interface WebResourceRoot {
      */
     WebResource getResource(String path);
 
+    /**
+     * 
+     * @param path
+     * @return 
+     */
     String[] list(String path);
 
+    /**
+     * 
+     * @param path
+     * @param data
+     * @param overwrite
+     * @return 
+     */
     boolean write(String path, InputStream data, boolean overwrite);
 
-    public WebdavContext getContext();
+    /**
+     * 
+     * @return 
+     */
+    WebdavContext getContext();
 
-    public boolean mkdir(String path);
+    /**
+     * 
+     * @param path
+     * @return 
+     */
+    boolean mkdir(String path);
     
 }

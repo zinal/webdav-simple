@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 zinal.
+ * Copyright 2019 zinal.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,37 +13,55 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ru.zinal.webdav.model;
+package ru.zinal.webdav.fs;
 
 import java.io.InputStream;
+import java.util.List;
+import ru.zinal.webdav.model.*;
 
 /**
  *
  * @author zinal
  */
-public abstract class WebResource implements GenericResource {
+public class FsDirectory extends WebDirectory {
 
-    public String getLastModifiedHttp() {
+    @Override
+    public String getName() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public String getWebappPath() {
+    @Override
+    public long getCreation() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public InputStream getInputStream() {
+    @Override
+    public long getLastModified() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public String getETag() {
+    @Override
+    public WebResource lookup(String name) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public String getMimeType() {
+    @Override
+    public WebResource createDirectory(String name) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public boolean delete() {
+    @Override
+    public WebResource createFile(String name, InputStream data) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean delete(String name) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public List<String> list() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
     

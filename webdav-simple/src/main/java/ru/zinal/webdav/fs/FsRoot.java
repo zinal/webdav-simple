@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 zinal.
+ * Copyright 2019 zinal.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,37 +13,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ru.zinal.webdav.model;
+package ru.zinal.webdav.fs;
 
 import java.io.InputStream;
+import ru.zinal.webdav.WebdavContext;
+import ru.zinal.webdav.model.*;
 
 /**
  *
  * @author zinal
  */
-public abstract class WebResource implements GenericResource {
+public class FsRoot implements WebResourceRoot {
 
-    public String getLastModifiedHttp() {
+    @Override
+    public WebResource getResource(String path) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public String getWebappPath() {
+    @Override
+    public String[] list(String path) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public InputStream getInputStream() {
+    @Override
+    public boolean write(String path, InputStream data, boolean overwrite) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public String getETag() {
+    @Override
+    public WebdavContext getContext() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public String getMimeType() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    public boolean delete() {
+    @Override
+    public boolean mkdir(String path) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
     
