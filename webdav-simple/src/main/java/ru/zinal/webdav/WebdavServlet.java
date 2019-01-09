@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -159,6 +158,7 @@ public class WebdavServlet extends DefaultServlet {
 
     /**
      * Initialize this servlet.
+     * @throws javax.servlet.ServletException
      */
     @Override
     public void init()
@@ -853,8 +853,8 @@ public class WebdavServlet extends DefaultServlet {
             // Reading lock information
 
             NodeList childList = lockInfoNode.getChildNodes();
-            StringWriter strWriter = null;
-            DOMWriter domWriter = null;
+            StringWriter strWriter;
+            DOMWriter domWriter;
 
             Node lockScopeNode = null;
             Node lockTypeNode = null;
@@ -1069,15 +1069,10 @@ public class WebdavServlet extends DefaultServlet {
         } // (lockRequestType == LOCK_CREATION)
 
         if (lockRequestType == LOCK_REFRESH) {
-            
-            String srcToken = req.getHeader("If");
-            if (srcToken == null)
-                srcToken = "";
-            else {
-                srcToken = SmallT.extractToken(srcToken);
-                lock.getTokens().add(srcToken);
-            }
-            
+
+            String srcToken = SmallT.extractToken( req.getHeader("If") );
+            lock.getTokens().add(srcToken);
+
             // Checking resource locks
             LockInfo lockInfo = lockManager.refreshLock(lock);
             if (lockInfo != null)
@@ -1307,13 +1302,13 @@ public class WebdavServlet extends DefaultServlet {
 
         // Copying source to destination
 
-        Hashtable<String,Integer> errorList = new Hashtable<>();
+        Map<String,Integer> errorList = new HashMap<>();
 
         boolean result = copyResource(errorList, path, destinationPath);
 
         if ((!result) || (!errorList.isEmpty())) {
             if (errorList.size() == 1) {
-                resp.sendError(errorList.elements().nextElement().intValue());
+                resp.sendError(errorList.values().iterator().next());
             } else {
                 sendReport(req, resp, errorList);
             }
@@ -1344,7 +1339,7 @@ public class WebdavServlet extends DefaultServlet {
      * @param dest Destination path
      * @return <code>true</code> if the copy was successful
      */
-    private boolean copyResource(Hashtable<String,Integer> errorList,
+    private boolean copyResource(Map<String,Integer> errorList,
             String source, String dest) {
 
         if (debug > 1)
@@ -1356,7 +1351,7 @@ public class WebdavServlet extends DefaultServlet {
             if (!resources.mkdir(dest)) {
                 WebResource destResource = resources.getResource(dest);
                 if (!destResource.isDirectory()) {
-                    errorList.put(dest, Integer.valueOf(WebdavStatus.SC_CONFLICT));
+                    errorList.put(dest, WebdavStatus.SC_CONFLICT);
                     return false;
                 }
             }
@@ -1473,8 +1468,7 @@ public class WebdavServlet extends DefaultServlet {
 
             deleteCollection(req, path, errorList);
             if (!resource.delete()) {
-                errorList.put(path, Integer.valueOf
-                    (WebdavStatus.SC_INTERNAL_SERVER_ERROR));
+                errorList.put(path, WebdavStatus.SC_INTERNAL_SERVER_ERROR);
             }
 
             if (!errorList.isEmpty()) {
