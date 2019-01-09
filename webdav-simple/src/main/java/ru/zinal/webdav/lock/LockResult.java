@@ -15,8 +15,8 @@
  */
 package ru.zinal.webdav.lock;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  *
@@ -25,7 +25,7 @@ import java.util.List;
 public class LockResult {
     
     private final LockInfo info;
-    private final List<String> lockedPaths = new ArrayList<>();
+    private final Set<String> lockedPaths = new HashSet<>();
 
     public LockResult() {
         this.info = null;
@@ -43,7 +43,7 @@ public class LockResult {
         return info!=null;
     }
 
-    public List<String> getLockedPaths() {
+    public Set<String> getLockedPaths() {
         return lockedPaths;
     }
     

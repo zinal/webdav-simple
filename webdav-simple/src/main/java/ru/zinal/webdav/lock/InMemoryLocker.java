@@ -170,10 +170,22 @@ public class InMemoryLocker implements LockManager {
                 return true;
             for (String token : tokens) {
                 if (dir.getLock().getTokenExp().containsKey(token))
-                    return true;
+                    return false; // found skipped token
             }
+            // we have a locked resource without skipped tokens
+            return true;
         }
-        return false;
+    }
+
+    @Override
+    public LockInfo findLock(String path) {
+        synchronized(this) {
+            cleanupExpired();
+            LockRecord dir = locks.find(path);
+            if (dir==null || dir.getLock()==null)
+                return null;
+            return new LockInfo(dir.getLock());
+        }
     }
 
     @Override

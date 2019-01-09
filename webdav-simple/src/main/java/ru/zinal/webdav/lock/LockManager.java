@@ -39,6 +39,13 @@ public interface LockManager {
     LockInfo refreshLock(LockInfo lock);
     
     /**
+     * Retrieve the information about the lock on the specified object.
+     * @param path Path to object
+     * @return lock information, or null if lock does not exist
+     */
+    LockInfo findLock(String path);
+    
+    /**
      * Check whether the resource is locked
      * @param path Path to the resource
      * @param tokens Tokens to be skipped

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 zinal.
+ * Copyright 2019 zinal.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,26 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ru.zinal.webdav.model;
+package ru.zinal.webdav.util;
 
-import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  *
  * @author zinal
  */
-public interface LockManager {
+public class SmallT {
     
-    void createResourceLock(LockInfo lock);
+    private static final Pattern RX_TOKEN 
+            = Pattern.compile(".*:([a-zA-Z0-9\\-]+)>.*");
     
-    LockInfo getResourceLock(int id);
-    
-    LockInfo getResourceLock(String path);
-    
-    List<LockInfo> listResourceLocks(String pathPrefix, boolean exclusive);
-
-    LockInfo getCollectionLock(String path);
-    
-    List<LockInfo> listCollectionLocks(String pathPrefix);
+    public static String extractToken(String value) {
+        if (value==null || value.length()==0)
+            return "";
+        Matcher m = RX_TOKEN.matcher(value);
+        if (! m.matches())
+            throw new IllegalArgumentException("Illegal token data: " + value);
+        return m.group(1);
+    }
     
 }
