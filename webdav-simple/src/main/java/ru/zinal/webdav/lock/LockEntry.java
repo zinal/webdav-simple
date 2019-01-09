@@ -86,7 +86,16 @@ public class LockEntry {
      * @return true if the lock has expired.
      */
     public boolean hasExpired() {
-        final long tv = System.currentTimeMillis();
+        return hasExpired(System.currentTimeMillis());
+    }
+    
+    /**
+     * @param tv base timestamp to compare with locks
+     * @return true if the lock has expired.
+     */
+    public boolean hasExpired(long tv) {
+        if (tokenExp.isEmpty())
+            return true;
         for (Long expTime : tokenExp.values()) {
             if (expTime > tv)
                 return false;
@@ -100,8 +109,6 @@ public class LockEntry {
             if (expTime > tv)
                 tv = expTime;
         }
-        if (tv==0L)
-            tv = System.currentTimeMillis();
         return tv;
     }
     

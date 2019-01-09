@@ -15,6 +15,7 @@
  */
 package ru.zinal.webdav.lock;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -30,22 +31,22 @@ public class InMemoryLocker implements LockManager {
     private static final long CLEANUP_TIMEOUT = 5000L;
     
     /**
-     * The latest expiration cleanup operation
+     * The latest expiration cleanup operation.
      */
     private long lastCleanupTime = System.currentTimeMillis();
     
     /**
      * Structure of lock-null resources.
      */
-    private final LockDirectory locks = new LockDirectory();
+    private final LockRecord locks = new LockRecord();
 
     @Override
     public LockResult createLock(LockInfo lock) {
-        cleanupExpired();
         final String[] entryPath = LockEntry.splitPath(lock.getPath());
         synchronized(this) {
+            cleanupExpired();
             // 1. Checking the upper-level locks
-            LockDirectory dir = locks.traverse(entryPath);
+            LockRecord dir = locks.traverse(entryPath);
             LockResult result = checkUpperLocks(lock, dir);
             if (result!=null)
                 return result;
@@ -83,7 +84,7 @@ public class InMemoryLocker implements LockManager {
      * @return null, if no conflicting locks found,
      *    or list of conflicting paths otherwise
      */
-    private LockResult checkUpperLocks(LockInfo lock, LockDirectory dir) {
+    private LockResult checkUpperLocks(LockInfo lock, LockRecord dir) {
         LockResult result = null;
         while (dir!=null) {
             if (dir.getLock()!=null
@@ -91,7 +92,7 @@ public class InMemoryLocker implements LockManager {
                 // the above check for null+depth is NECESSARY
                 result = checkConflict(result, lock, dir.getLock());
             }
-            dir = dir.getOwner();
+            dir = dir.getParent();
         }
         return result;
     }
@@ -103,18 +104,18 @@ public class InMemoryLocker implements LockManager {
      * @return null, if no conflicting locks found,
      *    or list of conflicting paths otherwise
      */
-    private LockResult checkDownLocks(LockInfo lock, LockDirectory dir) {
+    private LockResult checkDownLocks(LockInfo lock, LockRecord dir) {
         if (lock.getDepth()==0) {
             // Checking the current entry ONLY
             return checkConflict(null, lock, dir.getLock());
         }
         // Checking the current entry and all possible sub-entries
         LockResult result = null;
-        final Stack<LockDirectory> stack = new Stack<>();
+        final Stack<LockRecord> stack = new Stack<>();
         stack.push(dir);
         while (!stack.empty()) {
             dir = stack.pop();
-            stack.addAll(dir.getItems().values());
+            stack.addAll(dir.getChildren().values());
             result = checkConflict(result, lock, dir.getLock());
         }
         return result;
@@ -141,9 +142,9 @@ public class InMemoryLocker implements LockManager {
 
     @Override
     public LockInfo refreshLock(LockInfo lock) {
-        cleanupExpired();
         synchronized(this) {
-            LockDirectory dir = locks.find(lock.getPath());
+            cleanupExpired();
+            LockRecord dir = locks.find(lock.getPath());
             if (dir==null || dir.getLock()==null)
                 return null;
             boolean retval = false;
@@ -160,9 +161,9 @@ public class InMemoryLocker implements LockManager {
 
     @Override
     public boolean isLocked(String path, Collection<String> tokens) {
-        cleanupExpired();
         synchronized(this) {
-            LockDirectory dir = locks.find(path);
+            cleanupExpired();
+            LockRecord dir = locks.find(path);
             if (dir==null || dir.getLock()==null)
                 return false;
             if (tokens==null || tokens.isEmpty())
@@ -179,64 +180,92 @@ public class InMemoryLocker implements LockManager {
     public boolean removeLock(String path, String token) {
         boolean retval = false;
         synchronized(this) {
-            LockDirectory dir = locks.find(path);
+            LockRecord dir = locks.find(path);
             if (dir!=null && dir.getLock()!=null) {
                 if ( dir.getLock().getTokenExp().remove(token) != null )
                     retval = true;
             }
+            cleanupExpired();
         }
-        cleanupExpired();
         return retval;
     }
 
     @Override
     public List<LockInfo> discoverLocks(String path) {
-        cleanupExpired();
-        throw new UnsupportedOperationException("Not supported yet.");
+        final List<LockInfo> retval = new ArrayList<>();
+        synchronized(this) {
+            cleanupExpired();
+            LockRecord dir = locks.traverse(path);
+            while (dir!=null) {
+                if (dir.getLock()!=null)
+                    retval.add(new LockInfo(dir.getLock()));
+                dir = dir.getParent();
+            }
+        }
+        return retval;
     }
 
     @Override
     public void removeNullLock(String path) {
-        cleanupExpired();
-        throw new UnsupportedOperationException("Not supported yet.");
+        synchronized(this) {
+            LockRecord dir = locks.find(path);
+            if (dir!=null && dir.getLock()!=null)
+                dir.getLock().setLockNull(false);
+            cleanupExpired();
+        }
     }
 
     @Override
     public List<LockInfo> listNullLocks(String parentPath) {
-        cleanupExpired();
-        throw new UnsupportedOperationException("Not supported yet.");
+        final List<LockInfo> retval = new ArrayList<>();
+        synchronized(this) {
+            cleanupExpired();
+            LockRecord dir = locks.find(parentPath);
+            if (dir!=null) {
+                for (LockRecord cur : dir.getChildren().values()) {
+                    if (cur.getLock()!=null && cur.getLock().isLockNull())
+                        retval.add(new LockInfo(cur.getLock()));
+                }
+            }
+        }
+        return retval;
     }
     
     private void cleanupExpired() {
-        synchronized(this) {
-            final long tv = System.currentTimeMillis();
-            if (tv - lastCleanupTime < CLEANUP_TIMEOUT)
-                return;
-            lastCleanupTime = tv;
-            
-        }
+        final long tv = System.currentTimeMillis();
+        if (tv - lastCleanupTime < CLEANUP_TIMEOUT)
+            return;
+        lastCleanupTime = tv;
+        locks.cleanup(tv);
     }
     
-    static class LockDirectory {
+    static class LockRecord {
 
-        private final LockDirectory owner;
-        private final HashMap<String, LockDirectory> items = new HashMap<>();
+        private final LockRecord parent;
+        private final String name;
+        private final HashMap<String, LockRecord> children = new HashMap<>();
         private LockEntry lock = null;
 
-        public LockDirectory() {
-            this.owner = null;
+        public LockRecord() {
+            this.parent = null;
+            this.name = null;
         }
 
-        public LockDirectory(LockDirectory owner) {
-            this.owner = owner;
+        public LockRecord(LockRecord owner, String name) {
+            this.parent = owner;
+            this.name = name;
         }
 
-        public LockDirectory getOwner() {
-            return owner;
+        public LockRecord getParent() {
+            return parent;
         }
 
-        public HashMap<String, LockDirectory> getItems() {
-            return items;
+        public String getName() {
+            return name;
+        }
+
+        public HashMap<String, LockRecord> getChildren() {
+            return children;
         }
 
         public LockEntry getLock() {
@@ -247,28 +276,28 @@ public class InMemoryLocker implements LockManager {
             this.lock = lock;
         }
 
-        public LockDirectory find(String path) {
+        public LockRecord find(String path) {
             return find(LockEntry.splitPath(path));
         }
 
-        public LockDirectory find(String[] path) {
-            LockDirectory cur = this;
+        public LockRecord find(String[] path) {
+            LockRecord cur = this;
             for (String item : path) {
-                cur = cur.items.get(item);
+                cur = cur.children.get(item);
                 if (cur==null)
                     return null;
             }
             return cur;
         }
 
-        public LockDirectory traverse(String path) {
+        public LockRecord traverse(String path) {
             return traverse(LockEntry.splitPath(path));
         }
         
-        public LockDirectory traverse(String[] path) {
-            LockDirectory cur = this;
+        public LockRecord traverse(String[] path) {
+            LockRecord cur = this;
             for (String item : path) {
-                LockDirectory next = cur.items.get(item);
+                LockRecord next = cur.children.get(item);
                 if (next==null)
                     break;
                 cur = next;
@@ -276,23 +305,57 @@ public class InMemoryLocker implements LockManager {
             return cur;
         }
         
-        public LockDirectory create(String path) {
+        public LockRecord create(String path) {
             return create(LockEntry.splitPath(path));
         }
 
-        public LockDirectory create(String[] path) {
-            LockDirectory cur = this;
+        public LockRecord create(String[] path) {
+            LockRecord cur = this;
             for (String item : path) {
-                LockDirectory next = cur.items.get(item);
+                LockRecord next = cur.children.get(item);
                 if (next==null) {
-                    next = new LockDirectory(cur);
-                    cur.items.put(item, next);
+                    next = new LockRecord(cur, item);
+                    cur.children.put(item, next);
                 }
                 cur = next;
             }
             return cur;
         }
+        
+        public void cleanup() {
+            cleanup(0L);
+        }
+        
+        public void cleanup(long tv) {
+            final Stack<LockRecord> stack1 = new Stack<>();
+            final Stack<LockRecord> stack2 = new Stack<>();
+            // Round one - clean up the expired locks
+            stack1.push(this);
+            while (!stack1.empty()) {
+                LockRecord cur = stack1.pop();
+                // second stack collects the hierarchy of all sub-items
+                stack2.push(cur);
+                // handle the expiration of the current lock
+                if (cur.lock!=null) {
+                    if (tv<=0L)
+                        tv = System.currentTimeMillis();
+                    if (cur.lock.hasExpired(tv))
+                        cur.lock = null;
+                }
+                // process all children buckets
+                for (LockRecord next : children.values())
+                    stack1.push(next);
+            }
+            // Round two - remove the empty lock buckets
+            while (!stack2.empty()) {
+                LockRecord cur = stack1.pop();
+                if (cur.lock == null && children.isEmpty()) {
+                    if (cur.parent!=null)
+                        cur.parent.children.remove(cur.name);
+                }
+            }
+        }
 
-    } // class LockDirectory
+    } // class LockRecord
 
 }
