@@ -16,7 +16,6 @@
 package ru.zinal.webdav.model;
 
 import java.io.InputStream;
-import java.util.List;
 import ru.zinal.webdav.WebdavContext;
 
 /**
@@ -52,6 +51,6 @@ public interface WebResourceRoot {
      * @param path
      * @return 
      */
-    boolean mkdir(String path);
+    WebResource mkdir(String path);
     
 }

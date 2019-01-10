@@ -33,9 +33,23 @@ public abstract class WebDirectory extends WebResource {
         return true;
     }
 
+    /**
+     * Default generic iterative implementation of name lookup
+     * @param names Sub-names array
+     * @return resource link, or null of the resource was not found
+     */
     @Override
-    public long getContentLength() {
-        throw new UnsupportedOperationException("No getContentLength() for WebDirectory");
+    public WebResource lookupDeep(String[] names) {
+        WebResource root = lookup("");
+        if (names==null || names.length==0)
+            return root;
+        WebResource cur = root;
+        for (String name : names) {
+            cur = cur.lookup(name);
+            if (cur==null)
+                break;
+        }
+        return cur;
     }
 
     @Override

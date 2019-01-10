@@ -56,6 +56,8 @@ public class PathSplitTest {
         assertArrayEquals(new String[] {"x"}, result);
         result = SmallT.splitPath("y///");
         assertArrayEquals(new String[] {"y"}, result);
+        result = SmallT.splitPath("y/../..//./a");
+        assertArrayEquals(new String[] {"y", "a"}, result);
     }
 
     @Test

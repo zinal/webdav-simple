@@ -504,7 +504,7 @@ public class DefaultServlet extends HttpServlet {
             // Copy data in oldRevisionContent to contentFile
             if (oldResource.isFile()) {
                 try (BufferedInputStream bufOldRevStream =
-                    new BufferedInputStream(oldResource.getInputStream(),
+                    new BufferedInputStream(oldResource.getData(),
                             BUFFER_SIZE)) {
 
                     int numBytesRead;
@@ -792,7 +792,7 @@ public class DefaultServlet extends HttpServlet {
                         if (resource.isDirectory()) {
                             renderResult = render(getPathPrefix(request), resource);
                         } else {
-                            renderResult = resource.getInputStream();
+                            renderResult = resource.getData();
                         }
                         copy(renderResult, writer);
                     } else {
@@ -801,7 +801,7 @@ public class DefaultServlet extends HttpServlet {
                             renderResult = render(getPathPrefix(request), resource);
                         } else {
                             // Output is content of resource
-                            renderResult = resource.getInputStream();
+                            renderResult = resource.getData();
                         }
                         // If a stream was configured, it needs to be copied to
                         // the output (this method closes the stream)
@@ -1431,7 +1431,7 @@ public class DefaultServlet extends HttpServlet {
             if (resource.isFile()) {
                 StringWriter buffer = new StringWriter();
                 InputStreamReader reader;
-                try (InputStream is = resource.getInputStream()){
+                try (InputStream is = resource.getData()){
                     reader = new InputStreamReader(is, CS_UTF8);
                     Throwable err = copyRange(reader, new PrintWriter(buffer));
                     if (err!=null) {
@@ -1466,7 +1466,7 @@ public class DefaultServlet extends HttpServlet {
             WebResource resource = resources.getResource(
                     directory.getPath() + localXsltFile);
             if (resource.isFile()) {
-                InputStream is = resource.getInputStream();
+                InputStream is = resource.getData();
                 if (is != null) {
                     if (Globals.IS_SECURITY_ENABLED) {
                         return secureXslt(is);
@@ -1802,7 +1802,7 @@ public class DefaultServlet extends HttpServlet {
 
         IOException exception;
 
-        try (InputStream resourceInputStream = resource.getInputStream()) {
+        try (InputStream resourceInputStream = resource.getData()) {
             try (InputStream istream = new BufferedInputStream
                     (resourceInputStream, inputBufferSize)) {
                 exception = copyRange(istream, ostream, range.start, range.end);
@@ -1835,9 +1835,9 @@ public class DefaultServlet extends HttpServlet {
 
         while ( (exception == null) && (ranges.hasNext()) ) {
 
-            InputStream resourceInputStream = resource.getInputStream();
-            try (InputStream istream 
-                    = new BufferedInputStream(resourceInputStream, inputBufferSize)) {
+            try ( InputStream resdata = resource.getData();
+                  InputStream istream 
+                    = new BufferedInputStream(resdata, inputBufferSize)) {
 
                 Range currentRange = ranges.next();
 

@@ -48,8 +48,14 @@ public class SmallT {
             newlen = path.length();
         } while (oldlen != newlen);
         if (!path.startsWith("/")) {
-            return "/" + path;
+            path = "/" + path;
         }
+        newlen = path.length();
+        do {
+            oldlen = newlen;
+            path = path.replaceAll("/[.]+/", "/");
+            newlen = path.length();
+        } while (oldlen != newlen);
         return path;
     }
 

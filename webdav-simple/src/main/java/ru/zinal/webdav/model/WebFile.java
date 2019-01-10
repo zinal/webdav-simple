@@ -40,6 +40,11 @@ public abstract class WebFile extends WebResource {
     }
 
     @Override
+    public WebResource lookupDeep(String[] names) {
+        throw new UnsupportedOperationException("No lookup() for WebFile");
+    }
+
+    @Override
     public WebResource createDirectory(String name) {
         throw new UnsupportedOperationException("No createDirectory() for WebFile");
     }

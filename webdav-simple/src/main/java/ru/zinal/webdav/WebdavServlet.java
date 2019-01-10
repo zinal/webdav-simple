@@ -623,6 +623,11 @@ public class WebdavServlet extends DefaultServlet {
     protected void doMkcol(HttpServletRequest req, HttpServletResponse resp)
         throws ServletException, IOException {
 
+        if (readOnly) {
+            resp.sendError(WebdavStatus.SC_FORBIDDEN);
+            return;
+        }
+
         String path = getRelativePath(req);
 
         WebResource resource = resources.getResource(path);
@@ -631,11 +636,6 @@ public class WebdavServlet extends DefaultServlet {
         // path
         if (resource!=null) {
             sendNotAllowed(req, resp);
-            return;
-        }
-
-        if (readOnly) {
-            resp.sendError(WebdavStatus.SC_FORBIDDEN);
             return;
         }
 
@@ -660,14 +660,13 @@ public class WebdavServlet extends DefaultServlet {
             }
         }
 
-        if (resources.mkdir(path)) {
+        if (resources.mkdir(path) != null) {
             resp.setStatus(WebdavStatus.SC_CREATED);
             // Removing any lock-null resource which would be present
             lockManager.removeNullLock(path);
         } else {
             resp.sendError(WebdavStatus.SC_CONFLICT,
-                           WebdavStatus.getStatusText
-                           (WebdavStatus.SC_CONFLICT));
+                           WebdavStatus.getStatusText(WebdavStatus.SC_CONFLICT));
         }
     }
 
@@ -1346,10 +1345,13 @@ public class WebdavServlet extends DefaultServlet {
             log("Copy: " + source + " To: " + dest);
 
         WebResource sourceResource = resources.getResource(source);
+        if (sourceResource==null)
+            return false;
 
         if (sourceResource.isDirectory()) {
-            if (!resources.mkdir(dest)) {
-                WebResource destResource = resources.getResource(dest);
+            WebResource destResource = resources.mkdir(dest);
+            if (destResource==null) {
+                destResource = resources.getResource(dest);
                 if (!destResource.isDirectory()) {
                     errorList.put(dest, WebdavStatus.SC_CONFLICT);
                     return false;
@@ -1391,7 +1393,7 @@ public class WebdavServlet extends DefaultServlet {
                 // to file (without trailing '/')
                 dest = dest.substring(0, dest.length() - 1);
             }
-            try (InputStream is = sourceResource.getInputStream()) {
+            try (InputStream is = sourceResource.getData()) {
                 if (resources.write(dest, is, false) == null) {
                     errorList.put(source, WebdavStatus.SC_INTERNAL_SERVER_ERROR);
                     return false;

@@ -15,8 +15,6 @@
  */
 package ru.zinal.webdav.model;
 
-import java.io.InputStream;
-
 /**
  *
  * @author zinal
@@ -34,10 +32,6 @@ public abstract class WebResource implements GenericResource {
     }
 
     public String getLastModifiedHttp() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    public InputStream getInputStream() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

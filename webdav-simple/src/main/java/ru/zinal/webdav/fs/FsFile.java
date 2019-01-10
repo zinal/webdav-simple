@@ -15,7 +15,12 @@
  */
 package ru.zinal.webdav.fs;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.attribute.BasicFileAttributes;
 import ru.zinal.webdav.model.*;
 
 /**
@@ -23,25 +28,50 @@ import ru.zinal.webdav.model.*;
  * @author zinal
  */
 public class FsFile extends WebFile {
+    
+    private static final org.slf4j.Logger LOG
+            = org.slf4j.LoggerFactory.getLogger(FsFile.class);
+    
+    private final File file;
+    private long createdAt = 0L;
 
+    public FsFile(File file) {
+        this.file = file;
+    }
+    
     @Override
     public long getCreation() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        if (createdAt==0L) {
+            try {
+                BasicFileAttributes bfa = Files.readAttributes(file.toPath(), 
+                        BasicFileAttributes.class);
+                createdAt = bfa.creationTime().toMillis();
+            } catch(IOException ex) {
+                LOG.warn("Cannot get creation time for file {}", file, ex);
+                createdAt = 1L;
+            }
+        }
+        return createdAt;
     }
 
     @Override
     public long getLastModified() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return file.lastModified();
     }
 
     @Override
     public long getContentLength() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return file.length();
     }
 
     @Override
     public InputStream getData() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        try {
+            return new FileInputStream(file);
+        } catch(IOException ex) {
+            LOG.warn("Cannot open file {}", file, ex);
+            return null;
+        }
     }
 
     @Override
@@ -61,7 +91,7 @@ public class FsFile extends WebFile {
 
     @Override
     public boolean delete() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return file.delete();
     }
     
 }

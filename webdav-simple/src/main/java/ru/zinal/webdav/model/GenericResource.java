@@ -78,6 +78,13 @@ public interface GenericResource {
     WebResource lookup(String name);
     
     /**
+     * Find the resource with the specified name
+     * @param names List of sequential sub-names
+     * @return Resource information, or null if the resource was not found
+     */
+    WebResource lookupDeep(String[] names);
+    
+    /**
      * Create the collection.
      * In case the copllection already exists, do nothing.
      * @param name Name of the collection to be created
