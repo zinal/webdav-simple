@@ -17,7 +17,6 @@ package ru.zinal.webdav.model;
 
 import java.io.InputStream;
 import java.util.List;
-import ru.zinal.webdav.WebdavContext;
 import ru.zinal.webdav.util.SmallT;
 
 /**

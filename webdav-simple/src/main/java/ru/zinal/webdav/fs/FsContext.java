@@ -15,7 +15,7 @@
  */
 package ru.zinal.webdav.fs;
 
-import ru.zinal.webdav.WebdavContext;
+import ru.zinal.webdav.model.WebdavContext;
 
 /**
  *
@@ -32,5 +32,13 @@ public class FsContext extends WebdavContext {
     public void setDataPath(String dataPath) {
         this.dataPath = dataPath;
     }
-    
+
+    @Override
+    public void expand() {
+        super.expand();
+        if (dataPath==null)
+            dataPath = "./data/";
+        dataPath = expandDirectory(dataPath);
+    }
+
 }

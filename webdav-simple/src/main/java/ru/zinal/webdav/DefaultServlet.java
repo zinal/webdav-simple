@@ -16,6 +16,7 @@
  */
 package ru.zinal.webdav;
 
+import ru.zinal.webdav.model.WebdavContext;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -502,7 +503,7 @@ public class DefaultServlet extends HttpServlet {
             WebResource oldResource = resources.getResource(path);
 
             // Copy data in oldRevisionContent to contentFile
-            if (oldResource.isFile()) {
+            if (oldResource!=null && oldResource.isFile()) {
                 try (BufferedInputStream bufOldRevStream =
                     new BufferedInputStream(oldResource.getData(),
                             BUFFER_SIZE)) {

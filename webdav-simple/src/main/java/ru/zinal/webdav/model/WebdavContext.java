@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ru.zinal.webdav;
+package ru.zinal.webdav.model;
+
+import java.io.File;
 
 /**
  *
@@ -29,6 +31,23 @@ public class WebdavContext {
 
     public void setConfigPath(String configPath) {
         this.configPath = configPath;
+    }
+    
+    public void expand() {
+        if (configPath==null)
+            configPath = "./config/";
+        configPath = expandDirectory(configPath);
+    }
+    
+    protected static String expandDirectory(String src) {
+        File f = new File(src);
+        f = f.getAbsoluteFile();
+        if (!f.exists()) {
+            f.mkdirs();
+        }
+        if (!f.isDirectory())
+            throw new IllegalArgumentException("Not a directory: " + src);
+        return f.getPath();
     }
     
 }

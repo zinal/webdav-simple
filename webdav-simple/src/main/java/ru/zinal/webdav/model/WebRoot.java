@@ -16,7 +16,6 @@
 package ru.zinal.webdav.model;
 
 import java.io.InputStream;
-import ru.zinal.webdav.WebdavContext;
 
 /**
  *

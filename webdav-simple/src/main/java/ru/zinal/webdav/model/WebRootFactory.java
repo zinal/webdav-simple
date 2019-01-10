@@ -15,8 +15,6 @@
  */
 package ru.zinal.webdav.model;
 
-import ru.zinal.webdav.WebdavContext;
-
 /**
  *
  * @author zinal

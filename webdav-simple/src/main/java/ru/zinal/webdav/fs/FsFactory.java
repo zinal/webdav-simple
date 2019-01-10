@@ -15,7 +15,7 @@
  */
 package ru.zinal.webdav.fs;
 
-import ru.zinal.webdav.WebdavContext;
+import ru.zinal.webdav.model.WebdavContext;
 import ru.zinal.webdav.model.*;
 
 /**
