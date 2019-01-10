@@ -143,16 +143,17 @@ public interface GenericResource {
     /**
      * Replace the file content with data from the input stream
      * @param data Input stream containing the replacement data
+     * @return true, if replacement succeeded, false otherwise
      */
-    void replaceData(InputStream data);
+    boolean replaceData(InputStream data);
     
     /**
      * Replace part of the file content with data from the input stream.
      * Also can be used to trim the file to the specified length.
      * @param data Input stream containing the replacement data
      * @param start Start position to write the data
-     * @param totalSize Total size of the file (can be -1, e.g. unspecified)
+     * @return true, if replacement succeeded, false otherwise
      */
-    void replaceData(InputStream data, long start, long totalSize);
+    boolean replaceData(InputStream data, long start);
 
 }

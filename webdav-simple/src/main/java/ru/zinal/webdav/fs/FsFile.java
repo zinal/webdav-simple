@@ -17,9 +17,13 @@ package ru.zinal.webdav.fs;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import ru.zinal.webdav.model.*;
 
@@ -76,22 +80,66 @@ public class FsFile extends WebFile {
 
     @Override
     public InputStream getData(long start, long finish) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        try {
+            return new FsLimitedInput(file, start, finish);
+        } catch(IOException ex) {
+            LOG.warn("Cannot open file {}", file, ex);
+            return null;
+        }
     }
 
     @Override
-    public void replaceData(InputStream data) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public boolean replaceData(InputStream data) {
+        File tempFile = null;
+        try {
+            tempFile = new File(file.getPath() 
+                    + "-" + System.currentTimeMillis());
+            try ( FileOutputStream fos = new FileOutputStream(tempFile) ) {
+                final byte buf[] = new byte[32768];
+                while (true) {
+                    int len = data.read(buf);
+                    if (len<=0) break;
+                    fos.write(buf, 0, len);
+                }
+            }
+            file.delete();
+            tempFile.renameTo(file);
+            return true;
+        } catch(Exception ex) {
+            LOG.warn("Cannot replace data of file {}", file, ex);
+            if (tempFile!=null)
+                tempFile.delete();
+            return false;
+        }
     }
 
     @Override
-    public void replaceData(InputStream data, long start, long totalSize) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public boolean replaceData(InputStream data, long start) {
+        try {
+            try (FileChannel channel = FileChannel.open(file.toPath(),
+                    StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
+                channel.position(start);
+                final byte buf[] = new byte[32768];
+                final ByteBuffer xbuf = ByteBuffer.wrap(buf);
+                while (true) {
+                    int len = data.read(buf);
+                    if (len<=0) break;
+                    if (len==buf.length)
+                        channel.write(xbuf);
+                    else
+                        channel.write(ByteBuffer.wrap(buf, 0, len));
+                }
+            }
+            return true;
+        } catch(Exception ex) {
+            LOG.warn("Cannot update data of file {}", file, ex);
+            return false;
+        }
     }
 
     @Override
     public boolean delete() {
         return file.delete();
     }
-    
+
 }

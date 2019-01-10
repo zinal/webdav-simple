@@ -63,12 +63,12 @@ public abstract class WebDirectory extends WebResource {
     }
 
     @Override
-    public void replaceData(InputStream data) {
+    public boolean replaceData(InputStream data) {
         throw new UnsupportedOperationException("No replaceData() for WebDirectory");
     }
 
     @Override
-    public void replaceData(InputStream data, long start, long totalSize) {
+    public boolean replaceData(InputStream data, long start) {
         throw new UnsupportedOperationException("No replaceData() for WebDirectory");
     }
     
