@@ -41,6 +41,10 @@ public class FsDirectory extends WebDirectory {
         this.file = file;
     }
     
+    public FsDirectory(String pathname) {
+        this.file = new File(pathname);
+    }
+    
     @Override
     public long getCreation() {
         if (createdAt==0L) {

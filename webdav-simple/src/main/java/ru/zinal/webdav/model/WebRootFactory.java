@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 zinal.
+ * Copyright 2019 zinal.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,42 +15,14 @@
  */
 package ru.zinal.webdav.model;
 
-import java.io.InputStream;
 import ru.zinal.webdav.WebdavContext;
 
 /**
  *
  * @author zinal
  */
-public interface WebResourceRoot {
+public interface WebRootFactory {
     
-    /**
-     * Get the resource by path
-     * @param path Path to the resource
-     * @return Resource description, or null of the resource was not found
-     */
-    WebResource getResource(String path);
-
-    /**
-     * 
-     * @param path
-     * @param data
-     * @param overwrite
-     * @return 
-     */
-    WebResource write(String path, InputStream data, boolean overwrite);
-
-    /**
-     * 
-     * @return 
-     */
-    WebdavContext getContext();
-
-    /**
-     * 
-     * @param path
-     * @return 
-     */
-    WebResource mkdir(String path);
+    WebRoot create(WebdavContext context);
     
 }

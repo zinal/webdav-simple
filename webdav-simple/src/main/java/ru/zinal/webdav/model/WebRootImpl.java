@@ -24,7 +24,7 @@ import ru.zinal.webdav.util.SmallT;
  *
  * @author zinal
  */
-public class WebRootImpl implements WebResourceRoot {
+public class WebRootImpl implements WebRoot {
     
     private static final org.slf4j.Logger LOG
             = org.slf4j.LoggerFactory.getLogger(WebRootImpl.class);

@@ -173,7 +173,7 @@ public class DefaultServlet extends HttpServlet {
     /**
      * The complete set of web application resources
      */
-    protected transient WebResourceRoot resources = null;
+    protected transient WebRoot resources = null;
 
     /**
      * Should the Accept-Ranges: bytes header be send with static resources?
@@ -228,7 +228,7 @@ public class DefaultServlet extends HttpServlet {
         }
 
         // Load the web resources
-        resources = (WebResourceRoot) getServletContext().getAttribute(
+        resources = (WebRoot) getServletContext().getAttribute(
                 Globals.RESOURCES_ATTR);
 
         if (resources == null) {
