@@ -430,25 +430,22 @@ public class DefaultServlet extends HttpServlet {
         }
 
         String path = getRelativePath(req);
-
+        Range range = parseContentRange(req, resp);
         WebResource resource = resources.getResource(path);
 
-        Range range = parseContentRange(req, resp);
-
-        InputStream resourceInputStream = null;
-
-        try {
+        if (range != null && resource != null) {
             // Append data specified in ranges to existing content for this
-            // resource - create a temp. file on the local filesystem to
-            // perform this operation
+            // resource.
             // Assume just one range is specified for now
-            if (range != null) {
-                File contentFile = executePartialPut(req, range, path);
-                resourceInputStream = new FileInputStream(contentFile);
-            } else {
-                resourceInputStream = req.getInputStream();
+            try (BufferedInputStream requestBufInStream =
+                new BufferedInputStream(req.getInputStream(), BUFFER_SIZE)) {
+                if ( ! resource.replaceData(requestBufInStream, range.start) ) {
+                    resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                }
             }
-
+        } else {
+            // Replace the full resource as a whole
+            InputStream resourceInputStream = req.getInputStream();
             if (resources.write(path, resourceInputStream, true) != null) {
                 if (resource!=null) {
                     resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
@@ -458,80 +455,7 @@ public class DefaultServlet extends HttpServlet {
             } else {
                 resp.sendError(HttpServletResponse.SC_CONFLICT);
             }
-        } finally {
-            if (resourceInputStream != null) {
-                try {
-                    resourceInputStream.close();
-                } catch (IOException ioe) {
-                    // Ignore
-                }
-            }
         }
-    }
-
-
-    /**
-     * Handle a partial PUT.  New content specified in request is appended to
-     * existing content in oldRevisionContent (if present). This code does
-     * not support simultaneous partial updates to the same resource.
-     * @param req The Servlet request
-     * @param range The range that will be written
-     * @param path The path
-     * @return the associated file object
-     * @throws IOException an IO error occurred
-     */
-    protected File executePartialPut(HttpServletRequest req, Range range,
-                                     String path)
-        throws IOException {
-
-        // Append data specified in ranges to existing content for this
-        // resource - create a temp. file on the local filesystem to
-        // perform this operation
-        File tempDir = (File) getServletContext().getAttribute
-            (ServletContext.TEMPDIR);
-        // Convert all '/' characters to '.' in resourcePath
-        String convertedResourcePath = path.replace('/', '.');
-        File contentFile = new File(tempDir, convertedResourcePath);
-        if (contentFile.createNewFile()) {
-            // Clean up contentFile when Tomcat is terminated
-            contentFile.deleteOnExit();
-        }
-
-        try (RandomAccessFile randAccessContentFile =
-            new RandomAccessFile(contentFile, "rw")) {
-
-            WebResource oldResource = resources.getResource(path);
-
-            // Copy data in oldRevisionContent to contentFile
-            if (oldResource!=null && oldResource.isFile()) {
-                try (BufferedInputStream bufOldRevStream =
-                    new BufferedInputStream(oldResource.getData(),
-                            BUFFER_SIZE)) {
-
-                    int numBytesRead;
-                    byte[] copyBuffer = new byte[BUFFER_SIZE];
-                    while ((numBytesRead = bufOldRevStream.read(copyBuffer)) != -1) {
-                        randAccessContentFile.write(copyBuffer, 0, numBytesRead);
-                    }
-
-                }
-            }
-
-            randAccessContentFile.setLength(range.length);
-
-            // Append data in request input stream to contentFile
-            randAccessContentFile.seek(range.start);
-            int numBytesRead;
-            byte[] transferBuffer = new byte[BUFFER_SIZE];
-            try (BufferedInputStream requestBufInStream =
-                new BufferedInputStream(req.getInputStream(), BUFFER_SIZE)) {
-                while ((numBytesRead = requestBufInStream.read(transferBuffer)) != -1) {
-                    randAccessContentFile.write(transferBuffer, 0, numBytesRead);
-                }
-            }
-        }
-
-        return contentFile;
     }
 
 
